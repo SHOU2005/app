@@ -394,13 +394,14 @@ function RegisterPageInner() {
                     letterSpacing: 3, fontFamily: '"Courier New", monospace', boxSizing: 'border-box' as const }} />
               </div>
 
+              <div id="firebase-recaptcha" style={{ display: 'none', marginBottom: 8 }} />
               <button onClick={sendOtp} disabled={!step1Valid||loading}
                 style={{ width:'100%', height:56, borderRadius:16, fontSize:16, fontWeight:800, border:'none',
                   background:step1Valid?'#111111':'rgba(0,0,0,0.07)',
                   color:step1Valid?'#FFFFFF':'rgba(0,0,0,0.25)',
                   boxShadow:step1Valid?'0 8px 32px rgba(0,0,0,0.15)':'none',
                   display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:step1Valid?'pointer':'default' }}>
-                {loading ? 'Sending OTP…' : <><span>Continue</span><ArrowRight style={{ width:18, height:18 }} /></>}
+                {loading ? 'Verifying…' : <><span>Continue</span><ArrowRight style={{ width:18, height:18 }} /></>}
               </button>
 
               {!step1Valid && (

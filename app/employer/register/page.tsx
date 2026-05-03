@@ -332,12 +332,13 @@ function RegisterInner() {
 
                 {error && <div style={{ fontSize: 12, color: '#EF4444', marginBottom: 12 }}>⚠ {error}</div>}
 
+                <div id="firebase-recaptcha" style={{ display: 'none', marginBottom: 8 }} />
                 <button onClick={sendOTP} disabled={loading} style={{
                   width: '100%', padding: '15px 0', borderRadius: 14, border: 'none', cursor: 'pointer',
                   background: BRAND, color: '#fff', fontWeight: 800, fontSize: 16, opacity: loading ? 0.75 : 1,
                   boxShadow: '0 6px 20px rgba(17,24,39,0.35)', fontFamily: 'inherit',
                 }}>
-                  🏢 {loading ? 'Sending OTP…' : 'Verify & Create Account'}
+                  🏢 {loading ? 'Verifying…' : 'Verify & Create Account'}
                 </button>
               </>
             )}

@@ -72,7 +72,6 @@ export default function CaptainLoginPage() {
 
   return (
     <div style={{ fontFamily: FONT, background: BG, minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 24px' }}>
-      <div id="firebase-recaptcha" />
       <div style={{ maxWidth: 400, margin: '0 auto', width: '100%' }}>
         <div style={{ marginBottom: 40, textAlign: 'center' }}>
           <div style={{ width: 64, height: 64, borderRadius: 18, background: BLUE, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 28 }}>
@@ -97,13 +96,14 @@ export default function CaptainLoginPage() {
               style={{ fontSize: 18, fontWeight: 600, letterSpacing: 2 }}
             />
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
+            <div id="firebase-recaptcha" style={{ display: 'none', marginTop: 12 }} />
             <button
               className="btn btn-primary btn-lg btn-full"
               style={{ marginTop: 20, borderRadius: 14 }}
               onClick={sendOTP}
               disabled={loading || phone.length !== 10}
             >
-              {loading ? 'Sending…' : 'Send OTP'}
+              {loading ? 'Verify & Send OTP…' : 'Send OTP'}
             </button>
             <p style={{ textAlign: 'center', marginTop: 24, color: T2, fontSize: 14 }}>
               New captain?{' '}
