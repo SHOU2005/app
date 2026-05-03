@@ -22,8 +22,8 @@ function loadScript(src: string): Promise<void> {
 }
 
 async function getFirebaseAuth(): Promise<any> {
-  await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js')
-  await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js')
+  await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js')
+  await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js')
   const fb = (window as any).firebase
   const existing = fb.apps?.find((a: any) => a.name === APP_NAME)
   const app = existing || fb.initializeApp(AUTH_CONFIG, APP_NAME)
