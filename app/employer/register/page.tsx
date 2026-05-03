@@ -74,7 +74,7 @@ function RegisterInner() {
     if (!val && i > 0) otpRefs[i - 1].current?.focus()
   }
 
-  const useFirebase = false
+  const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
 
   async function sendOTP() {
     setLoading(true); setError('')
@@ -332,7 +332,7 @@ function RegisterInner() {
 
                 {error && <div style={{ fontSize: 12, color: '#EF4444', marginBottom: 12 }}>⚠ {error}</div>}
 
-                <div id="firebase-recaptcha" style={{ display: 'none', marginBottom: 8 }} />
+                <div id="firebase-recaptcha" style={{ marginBottom: 8, minHeight: 78 }} />
                 <button onClick={sendOTP} disabled={loading} style={{
                   width: '100%', padding: '15px 0', borderRadius: 14, border: 'none', cursor: 'pointer',
                   background: BRAND, color: '#fff', fontWeight: 800, fontSize: 16, opacity: loading ? 0.75 : 1,

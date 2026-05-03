@@ -9,7 +9,7 @@ const T2   = 'rgba(255,255,255,0.4)'
 const BD   = 'rgba(255,255,255,0.08)'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
-const useFirebase = false
+const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
 
 export default function OpsLoginPage() {
   const router = useRouter()
@@ -87,7 +87,7 @@ export default function OpsLoginPage() {
               onKeyDown={e => e.key === 'Enter' && sendOTP()}
             />
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
-            <div id="firebase-recaptcha" style={{ display: 'none', marginTop: 12 }} />
+            <div id="firebase-recaptcha" style={{ marginTop: 12, minHeight: 78 }} />
             <button onClick={sendOTP} disabled={loading || phone.length !== 10}
               style={{ width: '100%', marginTop: 16, padding: '14px', borderRadius: 12, background: T1, color: '#000000', fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer', opacity: phone.length !== 10 ? 0.4 : 1 }}>
               {loading ? 'Verify & Send OTP…' : 'Send OTP'}

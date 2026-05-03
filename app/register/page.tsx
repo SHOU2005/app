@@ -130,7 +130,7 @@ function RegisterPageInner() {
     useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
   ]
 
-  const useFirebase = false
+  const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
 
   async function sendOtp() {
     if (phone.length < 10) return
@@ -394,7 +394,7 @@ function RegisterPageInner() {
                     letterSpacing: 3, fontFamily: '"Courier New", monospace', boxSizing: 'border-box' as const }} />
               </div>
 
-              <div id="firebase-recaptcha" style={{ display: 'none', marginBottom: 8 }} />
+              <div id="firebase-recaptcha" style={{ marginBottom: 8, minHeight: 78 }} />
               <button onClick={sendOtp} disabled={!step1Valid||loading}
                 style={{ width:'100%', height:56, borderRadius:16, fontSize:16, fontWeight:800, border:'none',
                   background:step1Valid?'#111111':'rgba(0,0,0,0.07)',

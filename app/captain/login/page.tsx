@@ -8,7 +8,7 @@ const T2   = 'rgba(0,0,0,0.5)'
 const BLUE = '#111111'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
-const useFirebase = false
+const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
 
 export default function CaptainLoginPage() {
   const router = useRouter()
@@ -96,7 +96,7 @@ export default function CaptainLoginPage() {
               style={{ fontSize: 18, fontWeight: 600, letterSpacing: 2 }}
             />
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
-            <div id="firebase-recaptcha" style={{ display: 'none', marginTop: 12 }} />
+            <div id="firebase-recaptcha" style={{ marginTop: 12, minHeight: 78 }} />
             <button
               className="btn btn-primary btn-lg btn-full"
               style={{ marginTop: 20, borderRadius: 14 }}

@@ -14,7 +14,7 @@ function loadScript(src: string): Promise<void> {
     const s = document.createElement('script')
     s.src = src
     s.onload  = () => resolve()
-    s.onerror = () => reject(new Error(`Failed to load ${src}`))
+    s.onerror = () => reject(new Error(`Failed to load Firebase scripts`))
     document.head.appendChild(s)
   })
 }
@@ -37,54 +37,39 @@ function clearVerifier() {
   }
 }
 
-// Renders a visible reCAPTCHA checkbox in the container and waits for the user to solve it.
-// Visible reCAPTCHA always passes in WebView (user confirms manually), so Firebase sends SMS
-// instead of falling back to a voice call.
-async function solveRecaptcha(auth: any, containerId: string): Promise<void> {
+// Renders a visible "I'm not a robot" checkbox and waits for the user to tick it.
+// Visible reCAPTCHA works in Capacitor WebView as long as the domain is in Firebase
+// Authorized Domains (Firebase Console → Authentication → Settings → Authorized domains).
+function waitForRecaptcha(auth: any, containerId: string): Promise<void> {
   clearVerifier()
-
-  return new Promise<void>((resolve, reject) => {
-    try {
-      verifier = new (window as any).firebase.auth.RecaptchaVerifier(containerId, {
-        size: 'normal',
-        callback: () => { resolve() },
-        'expired-callback': () => {
-          clearVerifier()
-          reject(new Error('reCAPTCHA expired. Please try again.'))
-        },
-      }, auth.app)
-      verifier.render()
-    } catch (err) {
-      reject(err)
-    }
+  return new Promise((resolve, reject) => {
+    verifier = new (window as any).firebase.auth.RecaptchaVerifier(containerId, {
+      size: 'normal',
+      callback: () => resolve(),
+      'expired-callback': () => {
+        clearVerifier()
+        reject(new Error('Verification expired. Tap Send OTP again.'))
+      },
+    }, auth.app)
+    verifier.render().catch(reject)
   })
 }
 
 export async function sendPhoneCode(phoneDigits: string): Promise<string> {
   const auth = await getFirebaseAuth()
+  const containerId = 'firebase-recaptcha'
 
-  // Ensure container exists in DOM
-  let container = document.getElementById('firebase-recaptcha')
-  if (!container) {
-    container = document.createElement('div')
-    container.id = 'firebase-recaptcha'
-    document.body.appendChild(container)
-  }
+  // Make container visible so user can see and tap the checkbox
+  const el = document.getElementById(containerId)
+  if (el) { el.style.display = 'flex'; el.style.justifyContent = 'center' }
 
-  // Show container so user can see and solve the CAPTCHA
-  container.style.display = 'flex'
-  container.style.justifyContent = 'center'
-  container.style.margin = '12px 0'
+  await waitForRecaptcha(auth, containerId)
 
-  // Wait for user to tick the "I'm not a robot" checkbox
-  await solveRecaptcha(auth, 'firebase-recaptcha')
+  // Hide after solved
+  if (el) el.style.display = 'none'
 
-  // Hide container after solving
-  container.style.display = 'none'
-
-  const fullPhone = `+91${phoneDigits}`
   try {
-    const result = await auth.signInWithPhoneNumber(fullPhone, verifier)
+    const result = await auth.signInWithPhoneNumber(`+91${phoneDigits}`, verifier)
     ;(window as any).__firebaseConfirmation = result
     return result.verificationId || 'pending'
   } catch (err) {
@@ -95,15 +80,12 @@ export async function sendPhoneCode(phoneDigits: string): Promise<string> {
 
 export async function confirmPhoneCode(code: string): Promise<{ idToken: string; phone: string }> {
   const result = (window as any).__firebaseConfirmation
-  if (!result) throw new Error('No pending verification. Call sendPhoneCode first.')
-
+  if (!result) throw new Error('No pending verification. Tap Send OTP first.')
   const credential = await result.confirm(code)
   const idToken: string = await credential.user.getIdToken()
   const phone: string   = credential.user.phoneNumber || ''
-
   ;(window as any).__firebaseConfirmation = null
   clearVerifier()
-
   return { idToken, phone }
 }
 
