@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import OpsNav from '@/components/ops/OpsNav'
 
-const BG='#000000';const S1='#0F0F0F';const BD='rgba(255,255,255,0.08)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.4)';
+const BG='#000000';const S1='#0F0F0F';const BD='rgba(255,255,255,0.08)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.4)';const FONT='"DM Sans", system-ui, sans-serif'
 
 interface Employer { id: string; companyName: string | null; businessType: string | null; city: string | null; totalShifts: number; verifiedByOpsAt: string | null; user: { name: string; phone: string; isActive: boolean } }
 

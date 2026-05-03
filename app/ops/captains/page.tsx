@@ -5,6 +5,7 @@ import OpsNav from '@/components/ops/OpsNav'
 
 const BG   = '#000000'; const S1 = '#0F0F0F'; const S2 = '#141414'
 const BD   = 'rgba(255,255,255,0.08)'; const T1 = '#FFFFFF'; const T2 = 'rgba(255,255,255,0.4)'
+const FONT = '"DM Sans", system-ui, sans-serif'
 
 
 interface Captain { id: string; name: string; phone: string; territory: string | null; status: string; totalEarnings: number; pendingPayout: number; pendingCommissions: number; openTasks: number }
