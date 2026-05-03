@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getTokenFromCookies, generateOtp } from '@/lib/auth'
-import { sendSMS } from '@/lib/sms'
+import { getTokenFromCookies } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   const payload = getTokenFromCookies()
@@ -37,12 +36,6 @@ export async function POST(req: NextRequest) {
       captainReferralId: captain.id,
     },
   })
-
-  const otp = generateOtp()
-  await prisma.otpLog.create({
-    data: { phone, otp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) },
-  })
-  await sendSMS(phone, otp)
 
   return NextResponse.json({ success: true, userId: user.id }, { status: 201 })
 }

@@ -43,7 +43,6 @@
     "react-hot-toast": "2.4.1",
     "tailwind-merge": "2.4.0",
     "tar": "^6.2.1",
-    "twilio": "^6.0.0",
     "zod": "3.23.8"
   },
   "devDependencies": {
