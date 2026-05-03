@@ -8,7 +8,7 @@ const T2   = 'rgba(0,0,0,0.5)'
 const BLUE = '#111111'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
-const useFirebase = false
+const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
 
 export default function CaptainLoginPage() {
   const router = useRouter()

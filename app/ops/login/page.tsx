@@ -9,7 +9,7 @@ const T2   = 'rgba(255,255,255,0.4)'
 const BD   = 'rgba(255,255,255,0.08)'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
-const useFirebase = false
+const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
 
 export default function OpsLoginPage() {
   const router = useRouter()

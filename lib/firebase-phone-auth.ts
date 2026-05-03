@@ -1,8 +1,5 @@
 'use client'
 
-// Firebase Phone Auth using the hearus-4f2fe project.
-// Uses a named Firebase app ('hearus') to avoid collisions with the FCM relay-15824 app.
-
 const AUTH_CONFIG = {
   apiKey:     process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY    || '',
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN     || 'hearus-4f2fe.firebaseapp.com',
@@ -28,7 +25,6 @@ async function getFirebaseAuth(): Promise<any> {
 
   const fb = (window as any).firebase
 
-  // Use named app to avoid colliding with FCM's [DEFAULT] app
   const existing = fb.apps?.find((a: any) => a.name === APP_NAME)
   const app = existing || fb.initializeApp(AUTH_CONFIG, APP_NAME)
 
@@ -37,11 +33,19 @@ async function getFirebaseAuth(): Promise<any> {
 
 let verifier: any = null
 
-function getRecaptchaVerifier(auth: any, containerId: string): any {
-  if (verifier) return verifier
+function clearVerifier() {
+  if (verifier) {
+    try { verifier.clear() } catch {}
+    verifier = null
+  }
+}
+
+function createVerifier(auth: any, containerId: string): any {
+  clearVerifier()
   verifier = new (window as any).firebase.auth.RecaptchaVerifier(containerId, {
     size: 'invisible',
     callback: () => {},
+    'expired-callback': () => { clearVerifier() },
   }, auth.app)
   return verifier
 }
@@ -49,7 +53,7 @@ function getRecaptchaVerifier(auth: any, containerId: string): any {
 export async function sendPhoneCode(phoneDigits: string): Promise<string> {
   const auth = await getFirebaseAuth()
 
-  // Ensure the invisible reCAPTCHA container exists
+  // Ensure reCAPTCHA container exists in DOM
   let container = document.getElementById('firebase-recaptcha')
   if (!container) {
     container = document.createElement('div')
@@ -57,13 +61,18 @@ export async function sendPhoneCode(phoneDigits: string): Promise<string> {
     document.body.appendChild(container)
   }
 
-  const rv = getRecaptchaVerifier(auth, 'firebase-recaptcha')
+  // Always create a fresh verifier — stale token causes Firebase to fall back to voice call
+  const rv = createVerifier(auth, 'firebase-recaptcha')
   const fullPhone = `+91${phoneDigits}`
-  const result = await auth.signInWithPhoneNumber(fullPhone, rv)
 
-  // Store confirmationResult on window for confirm step
-  ;(window as any).__firebaseConfirmation = result
-  return result.verificationId || 'pending'
+  try {
+    const result = await auth.signInWithPhoneNumber(fullPhone, rv)
+    ;(window as any).__firebaseConfirmation = result
+    return result.verificationId || 'pending'
+  } catch (err) {
+    clearVerifier()
+    throw err
+  }
 }
 
 export async function confirmPhoneCode(code: string): Promise<{ idToken: string; phone: string }> {
@@ -74,9 +83,8 @@ export async function confirmPhoneCode(code: string): Promise<{ idToken: string;
   const idToken: string = await credential.user.getIdToken()
   const phone: string   = credential.user.phoneNumber || ''
 
-  // Clean up
   ;(window as any).__firebaseConfirmation = null
-  verifier = null
+  clearVerifier()
 
   return { idToken, phone }
 }
