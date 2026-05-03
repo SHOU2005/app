@@ -1,15 +1,15 @@
 import { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId:   'com.switchnow.employerapp',
-  appName: 'Switch Employer',
+  appId:   'com.switchnow.opsapp',
+  appName: 'Switch Ops',
   webDir:  'out',
   android: {
-    path:            'android-employer',
+    path:            'android-ops',
     backgroundColor: '#000000',
   },
   server: {
-    url:       'https://app.switchlocally.com/employer',
+    url:       'https://app.switchlocally.com/ops/login',
     cleartext: false,
   },
 }

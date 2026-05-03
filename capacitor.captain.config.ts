@@ -5,11 +5,12 @@ const config: CapacitorConfig = {
   appName: 'Switch Captain',
   webDir:  'out',
   android: {
+    path:            'android-captain',
     backgroundColor: '#FFFFFF',
   },
   server: {
-    url:       'http://192.168.1.108:3000',
-    cleartext: true,
+    url:       'https://app.switchlocally.com/captain/splash',
+    cleartext: false,
   },
 }
 

@@ -56,3 +56,8 @@ npm-debug.log*
 # iCloud
 *.icloud
 .vercel
+
+# Android signing
+keystore/
+*/signing.properties
+build/aab/
