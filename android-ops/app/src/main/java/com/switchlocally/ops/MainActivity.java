@@ -1,4 +1,4 @@
-package com.switchnow.workerapp;
+package com.switchlocally.ops;
 
 import android.os.Bundle;
 import android.view.Window;

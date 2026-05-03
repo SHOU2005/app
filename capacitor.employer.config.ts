@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId:   'com.switchnow.employerapp',
+  appId:   'com.switchlocally.employer',
   appName: 'Switch Employer',
   webDir:  'out',
   android: {

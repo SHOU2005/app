@@ -1,4 +1,4 @@
-package com.switchnow.workerapp;
+package com.switchlocally.employer;
 
 import android.Manifest;
 import android.os.Build;

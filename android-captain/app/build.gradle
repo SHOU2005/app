@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.switchnow.workerapp"
+    namespace = "com.switchlocally.captain"
     compileSdk = 36
     defaultConfig {
-        applicationId "com.switchnow.captainapp"
+        applicationId "com.switchlocally.captain"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 3
