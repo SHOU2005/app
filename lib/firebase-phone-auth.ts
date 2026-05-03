@@ -39,17 +39,25 @@ function clearVerifier() {
   }
 }
 
+function ensureContainer(): string {
+  const id = 'sw-recaptcha-root'
+  if (!document.getElementById(id)) {
+    const el = document.createElement('div')
+    el.id = id
+    el.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden'
+    document.body.appendChild(el)
+  }
+  return id
+}
+
 export async function sendPhoneCode(phoneDigits: string): Promise<string> {
   const auth = await getFirebaseAuth()
 
-  // Always start fresh — stale verifiers cause silent failures
   clearVerifier()
 
-  // Invisible reCAPTCHA: solved automatically by Google, no checkbox shown to users.
-  // Requires the app domain to be listed in Firebase Console →
-  // Authentication → Settings → Authorized domains.
+  const containerId = ensureContainer()
   verifier = new (window as any).firebase.auth.RecaptchaVerifier(
-    'firebase-recaptcha',
+    containerId,
     { size: 'invisible' },
     auth.app,
   )

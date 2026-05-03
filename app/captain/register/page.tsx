@@ -82,7 +82,6 @@ function RegisterForm() {
               </div>
             ))}
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 4 }}>{error}</p>}
-            <div id="firebase-recaptcha" style={{ display: 'none' }} />
             <button
               className="btn btn-primary btn-lg btn-full"
               style={{ marginTop: 16, borderRadius: 14, background: BLUE }}

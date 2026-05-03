@@ -67,7 +67,6 @@ export default function OpsLoginPage() {
               onKeyDown={e => e.key === 'Enter' && sendOTP()}
             />
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
-            <div id="firebase-recaptcha" style={{ display: 'none' }} />
             <button onClick={sendOTP} disabled={loading || phone.length !== 10}
               style={{ width: '100%', marginTop: 16, padding: '14px', borderRadius: 12, background: T1, color: '#000000', fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer', opacity: phone.length !== 10 ? 0.4 : 1 }}>
               {loading ? 'Verify & Send OTP…' : 'Send OTP'}

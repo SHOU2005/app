@@ -214,8 +214,6 @@ export default function LoginPage() {
 
         {error && <p style={{ fontSize: 13, color: '#EF4444', marginBottom: 12, fontWeight: 600 }}>{error}</p>}
 
-        <div id="firebase-recaptcha" style={{ display: 'none' }} />
-
         <button onClick={sendOTP} disabled={!phoneValid || loading}
           style={{
             width: '100%', height: 56, borderRadius: 16, border: 'none',

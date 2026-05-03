@@ -312,7 +312,6 @@ function RegisterInner() {
 
                 {error && <div style={{ fontSize: 12, color: '#EF4444', marginBottom: 12 }}>⚠ {error}</div>}
 
-                <div id="firebase-recaptcha" style={{ display: 'none' }} />
                 <button onClick={sendOTP} disabled={loading} style={{
                   width: '100%', padding: '15px 0', borderRadius: 14, border: 'none', cursor: 'pointer',
                   background: BRAND, color: '#fff', fontWeight: 800, fontSize: 16, opacity: loading ? 0.75 : 1,

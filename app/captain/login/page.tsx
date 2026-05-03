@@ -73,7 +73,6 @@ export default function CaptainLoginPage() {
               style={{ fontSize: 18, fontWeight: 600, letterSpacing: 2 }}
             />
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
-            <div id="firebase-recaptcha" style={{ display: 'none' }} />
             <button
               className="btn btn-primary btn-lg btn-full"
               style={{ marginTop: 20, borderRadius: 14 }}
