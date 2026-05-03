@@ -122,23 +122,19 @@ export async function POST(req: NextRequest) {
     // Admin can log into any app — sign token with the requested role
     const isAdmin = phone === ADMIN_PHONE
     const tokenRole = isAdmin
-      ? (user.role as 'EMPLOYER' | 'WORKER' | 'ADMIN' | 'CAPTAIN' | 'OPS')
+      ? ((role || 'WORKER') as 'EMPLOYER' | 'WORKER' | 'CAPTAIN' | 'OPS')
       : (user.role as 'EMPLOYER' | 'WORKER' | 'ADMIN' | 'CAPTAIN' | 'OPS')
 
     // Ensure admin has the required profile for whichever app they're accessing
     if (isAdmin) {
-      if (role === 'EMPLOYER') {
-        await prisma.employerProfile.upsert({
-          where:  { userId: user.id },
-          create: { userId: user.id },
-          update: {},
-        })
-      } else if (role === 'WORKER') {
-        await prisma.workerProfile.upsert({
-          where:  { userId: user.id },
-          create: { userId: user.id },
-          update: {},
-        })
+      if (tokenRole === 'EMPLOYER') {
+        await prisma.employerProfile.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} })
+      } else if (tokenRole === 'WORKER') {
+        await prisma.workerProfile.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} })
+      } else if (tokenRole === 'CAPTAIN') {
+        await prisma.captainProfile.upsert({ where: { userId: user.id }, create: { userId: user.id, status: 'ACTIVE' }, update: {} })
+      } else if (tokenRole === 'OPS') {
+        await prisma.opsProfile.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} })
       }
     }
 
