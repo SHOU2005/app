@@ -2,11 +2,11 @@
 
 const AUTH_CONFIG = {
   apiKey:     process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY    || '',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN     || 'hearus-4f2fe.firebaseapp.com',
-  projectId:  process.env.NEXT_PUBLIC_FIREBASE_AUTH_PROJECT_ID || 'hearus-4f2fe',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN     || 'relay-15824.firebaseapp.com',
+  projectId:  process.env.NEXT_PUBLIC_FIREBASE_AUTH_PROJECT_ID || 'relay-15824',
 }
 
-const APP_NAME = 'hearus'
+const APP_NAME = 'relay'
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
