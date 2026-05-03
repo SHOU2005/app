@@ -1,8 +1,6 @@
-// SMS sending removed — OTP is handled entirely by Firebase Phone Auth.
-// This stub exists only so existing imports don't break during the transition.
-
-export async function sendSMS(_to: string, _otp: string): Promise<void> {
-  console.log(`[SMS] Firebase handles OTP delivery. No external SMS provider configured.`)
+export async function sendSMS(to: string, otp: string): Promise<void> {
+  // In production: integrate MSG91 / Fast2SMS / Twilio here
+  console.log(`\n📱 OTP for +91${to} → ${otp}\n`)
 }
 
 export function buildOTPMessage(otp: string): string {

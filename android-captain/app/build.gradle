@@ -1,6 +1,19 @@
 apply plugin: 'com.android.application'
 
 android {
+
+    signingConfigs {
+        release {
+            def props = new Properties()
+            def propsFile = rootProject.file("signing.properties")
+            if (propsFile.exists()) { props.load(new FileInputStream(propsFile)) }
+            storeFile file(props["storeFile"] ?: "")
+            storePassword (props["storePassword"] ?: "")
+            keyAlias (props["keyAlias"] ?: "")
+            keyPassword (props["keyPassword"] ?: "")
+        }
+    }
+
     namespace = "com.switchlocally.captain"
     compileSdk = 36
     defaultConfig {
@@ -20,6 +33,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }

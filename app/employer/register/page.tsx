@@ -78,8 +78,12 @@ function RegisterInner() {
   async function sendOTP() {
     setLoading(true); setError('')
     try {
-      const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
-      await sendPhoneCode(phone)
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Failed to send OTP'); return }
       setOtpSent(true)
     } catch (e: any) { setError(e?.message || 'Network error') } finally { setLoading(false) }
   }
@@ -89,11 +93,9 @@ function RegisterInner() {
     if (code.length < 6) { setError('Enter 6-digit OTP'); return }
     setLoading(true); setError('')
     try {
-      const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
-      const { idToken } = await confirmPhoneCode(code)
-      const res = await fetch('/api/auth/firebase-verify', {
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, role: 'EMPLOYER', referralCode: referralCode || undefined }),
+        body: JSON.stringify({ phone, otp: code, role: 'EMPLOYER', referralCode: referralCode || undefined }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Invalid OTP'); return }

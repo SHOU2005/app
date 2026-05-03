@@ -21,8 +21,12 @@ export default function OpsLoginPage() {
     if (phone.length !== 10) { setError('Enter a valid 10-digit number'); return }
     setLoading(true); setError('')
     try {
-      const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
-      await sendPhoneCode(phone)
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, mode: 'login' }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Failed to send OTP'); return }
       setPhase('otp')
     } catch (e: any) {
       setError(e?.message || 'Failed to send OTP')
@@ -33,11 +37,9 @@ export default function OpsLoginPage() {
     if (otp.length < 6) return
     setLoading(true); setError('')
     try {
-      const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
-      const { idToken } = await confirmPhoneCode(otp)
-      const res  = await fetch('/api/auth/firebase-verify', {
+      const res  = await fetch('/api/auth/verify-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, role: 'OPS' }),
+        body: JSON.stringify({ phone, otp, role: 'OPS' }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Invalid OTP'); return }
