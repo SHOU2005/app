@@ -1,9 +1,11 @@
 'use client'
 
 const AUTH_CONFIG = {
-  apiKey:     process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY    || '',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN     || 'relay-15824.firebaseapp.com',
-  projectId:  process.env.NEXT_PUBLIC_FIREBASE_AUTH_PROJECT_ID || 'relay-15824',
+  apiKey:            process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY          || 'AIzaSyDA4N-yBgrNvPYXZP3MvbV81slAt3a5hCE',
+  authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN            || 'relay-15824.firebaseapp.com',
+  projectId:         process.env.NEXT_PUBLIC_FIREBASE_AUTH_PROJECT_ID        || 'relay-15824',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID   || '444335957190',
+  appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID                 || '1:444335957190:web:92c5b2f5b30a7ce16de3c7',
 }
 
 const APP_NAME = 'relay'
