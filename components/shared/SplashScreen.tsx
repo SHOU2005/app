@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-export default function SplashScreen() {
+export default function SplashScreen({ onDone }: { onDone?: () => void } = {}) {
   const [phase, setPhase] = useState<'enter' | 'show' | 'exit' | 'gone'>('enter')
 
   useEffect(() => {
@@ -12,7 +12,7 @@ export default function SplashScreen() {
     sessionStorage.setItem('sw_splashed', '1')
     const t0 = requestAnimationFrame(() => setPhase('show'))
     const t1 = setTimeout(() => setPhase('exit'), 2000)
-    const t2 = setTimeout(() => setPhase('gone'), 2700)
+    const t2 = setTimeout(() => { setPhase('gone'); onDone?.() }, 2700)
     return () => { cancelAnimationFrame(t0); clearTimeout(t1); clearTimeout(t2) }
   }, [])
 

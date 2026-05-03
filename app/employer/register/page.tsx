@@ -58,8 +58,9 @@ function RegisterInner() {
   const [gst, setGst]             = useState('')
   const [referralCode, setReferralCode] = useState(searchParams.get('ref') || '')
   const [otpSent, setOtpSent]     = useState(false)
-  const [otp, setOtp]             = useState(['', '', '', ''])
+  const [otp, setOtp]             = useState(['', '', '', '', '', ''])
   const otpRefs = [
+    useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
   ]
@@ -70,54 +71,33 @@ function RegisterInner() {
   function handleOTPInput(i: number, val: string) {
     if (!/^\d?$/.test(val)) return
     const next = [...otp]; next[i] = val; setOtp(next)
-    if (val && i < 3) otpRefs[i + 1].current?.focus()
+    if (val && i < 5) otpRefs[i + 1].current?.focus()
     if (!val && i > 0) otpRefs[i - 1].current?.focus()
   }
-
-  const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
 
   async function sendOTP() {
     setLoading(true); setError('')
     try {
-      if (useFirebase) {
-        const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
-        await sendPhoneCode(phone)
-      } else {
-        const res  = await fetch('/api/auth/send-otp', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone }),
-        })
-        const data = await res.json()
-        if (!res.ok) { setError(data.error || 'Failed to send OTP'); return }
-      }
+      const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
+      await sendPhoneCode(phone)
       setOtpSent(true)
     } catch (e: any) { setError(e?.message || 'Network error') } finally { setLoading(false) }
   }
 
   async function createAccount() {
     const code = otp.join('')
-    if (code.length < 4) { setError('Enter 4-digit OTP'); return }
+    if (code.length < 6) { setError('Enter 6-digit OTP'); return }
     setLoading(true); setError('')
     try {
-      if (useFirebase) {
-        const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
-        const { idToken } = await confirmPhoneCode(code)
-        const res = await fetch('/api/auth/firebase-verify', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken, role: 'EMPLOYER', referralCode: referralCode || undefined }),
-        })
-        const data = await res.json()
-        if (!res.ok) { setError(data.error || 'Invalid OTP'); return }
-        if (data.role !== 'EMPLOYER') { setError('This number is registered as a worker account. Please use a different number.'); return }
-      } else {
-        const vRes = await fetch('/api/auth/verify-otp', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, otp: code, role: 'EMPLOYER', referralCode: referralCode || undefined }),
-        })
-        const vData = await vRes.json()
-        if (!vRes.ok) { setError(vData.error || 'Invalid OTP'); return }
-        if (vData.role !== 'EMPLOYER') { setError('This number is registered as a worker account. Please use a different number.'); return }
-      }
+      const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
+      const { idToken } = await confirmPhoneCode(code)
+      const res = await fetch('/api/auth/firebase-verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken, role: 'EMPLOYER', referralCode: referralCode || undefined }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Invalid OTP'); return }
+      if (data.role !== 'EMPLOYER') { setError('This number is registered as a worker account. Please use a different number.'); return }
       const pRes = await fetch('/api/employer/profile', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: ownerName, companyName: bizName, businessType: bizType, address, city, gstNumber: gst }),
@@ -184,9 +164,9 @@ function RegisterInner() {
             </button>
             <div style={{ fontSize: 20, fontWeight: 900, color: '#111827', marginBottom: 4 }}>Verify Phone</div>
             <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 24 }}>
-              Enter the 4-digit OTP sent to +91 {phone}
+              Enter the 6-digit OTP sent to +91 {phone}
             </div>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 16 }}>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
               {otp.map((d, i) => (
                 <input
                   key={i} ref={otpRefs[i]}
@@ -194,8 +174,8 @@ function RegisterInner() {
                   onChange={e => handleOTPInput(i, e.target.value)}
                   onKeyDown={e => { if (e.key === 'Backspace' && !d && i > 0) otpRefs[i - 1].current?.focus() }}
                   style={{
-                    width: 62, height: 70, borderRadius: 16, textAlign: 'center',
-                    fontSize: 30, fontWeight: 900, outline: 'none',
+                    width: 48, height: 60, borderRadius: 14, textAlign: 'center',
+                    fontSize: 24, fontWeight: 900, outline: 'none',
                     border: `2.5px solid ${d ? BRAND : '#E5E7EB'}`,
                     background: d ? '#F3F4F6' : '#FAFAFA', color: '#111827',
                     fontFamily: 'monospace',
@@ -204,12 +184,12 @@ function RegisterInner() {
               ))}
             </div>
             {error && <div style={{ fontSize: 12, color: '#EF4444', textAlign: 'center', marginBottom: 12 }}>⚠ {error}</div>}
-            <button onClick={createAccount} disabled={loading || otp.join('').length < 4} style={{
+            <button onClick={createAccount} disabled={loading || otp.join('').length < 6} style={{
               width: '100%', padding: '15px 0', borderRadius: 14, border: 'none', cursor: 'pointer',
-              background: otp.join('').length === 4 ? BRAND : '#E5E7EB',
-              color: otp.join('').length === 4 ? '#fff' : '#9CA3AF',
+              background: otp.join('').length === 6 ? BRAND : '#E5E7EB',
+              color: otp.join('').length === 6 ? '#fff' : '#9CA3AF',
               fontWeight: 800, fontSize: 16, opacity: loading ? 0.75 : 1,
-              boxShadow: otp.join('').length === 4 ? '0 6px 20px rgba(17,24,39,0.35)' : 'none',
+              boxShadow: otp.join('').length === 6 ? '0 6px 20px rgba(17,24,39,0.35)' : 'none',
               fontFamily: 'inherit',
             }}>
               🏢 {loading ? 'Creating Account…' : 'Create Account'}
@@ -332,7 +312,7 @@ function RegisterInner() {
 
                 {error && <div style={{ fontSize: 12, color: '#EF4444', marginBottom: 12 }}>⚠ {error}</div>}
 
-                <div id="firebase-recaptcha" style={{ marginBottom: 8, minHeight: 78 }} />
+                <div id="firebase-recaptcha" style={{ display: 'none' }} />
                 <button onClick={sendOTP} disabled={loading} style={{
                   width: '100%', padding: '15px 0', borderRadius: 14, border: 'none', cursor: 'pointer',
                   background: BRAND, color: '#fff', fontWeight: 800, fontSize: 16, opacity: loading ? 0.75 : 1,

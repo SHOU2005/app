@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { MapPin, ChevronDown, Star, Clock, Zap, Bookmark, CheckCircle, TrendingUp, ChevronRight, Navigation, ArrowRight, Search, Filter } from 'lucide-react'
 import SplashScreen  from '@/components/shared/SplashScreen'
 import WelcomeCard   from '@/components/shared/WelcomeCard'
@@ -192,6 +193,7 @@ function ActiveJobBanner({ job, onArrive }: { job: Job; onArrive: () => void }) 
 
 export default function WorkerHome() {
   const { t } = useLang()
+  const router = useRouter()
   const FILTERS = t.filters as string[]
 
   const [mounted,      setMounted]     = useState(false)
@@ -245,10 +247,14 @@ export default function WorkerHome() {
 
   const urgentJobs = JOBS.filter(j => j.urgent)
 
+  function handleSplashDone() {
+    if (!localStorage.getItem('sw_lang')) router.push('/language')
+  }
+
   if (!mounted || !loggedIn) {
     return (
       <div className="worker-theme">
-        <SplashScreen />
+        <SplashScreen onDone={handleSplashDone} />
         <WelcomeCard />
         <div style={{ minHeight: '100vh', background: '#FFFFFF' }} />
       </div>
@@ -257,7 +263,7 @@ export default function WorkerHome() {
 
   return (
     <div className="worker-theme">
-      <SplashScreen />
+      <SplashScreen onDone={handleSplashDone} />
       <WelcomeCard />
       <PermissionScreen />
       <LocationSync onCity={setCityLabel} />

@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, ChevronLeft, Star, Zap, IndianRupee } from 'lucide-react'
 
@@ -7,79 +7,61 @@ export default function LoginPage() {
   const router = useRouter()
   const [phase,   setPhase]   = useState<'phone' | 'otp'>('phone')
   const [phone,   setPhone]   = useState('')
-  const [otp,     setOtp]     = useState(['', '', '', ''])
+  const [otp,     setOtp]     = useState('')
   const [error,   setError]   = useState('')
   const [loading, setLoading] = useState(false)
   const [resendTimer, setResendTimer] = useState(0)
 
   const phoneValid = /^\d{10}$/.test(phone)
 
-  const refs = [
-    useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
-  ]
+  function startResendTimer() {
+    let t = 30; setResendTimer(t)
+    const iv = setInterval(() => { t--; setResendTimer(t); if (t <= 0) clearInterval(iv) }, 1000)
+  }
 
   async function sendOTP() {
-    if (phone.length < 10 || loading) return
+    if (!phoneValid || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/send-otp', {
+      // Check if number is registered
+      const chk = await fetch('/api/auth/check-phone', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, mode: 'login' }),
+        body: JSON.stringify({ phone }),
       })
-      const d = await res.json()
-      if (!res.ok) {
-        if (d.notRegistered) { router.push(`/register?phone=${encodeURIComponent(phone)}`); return }
-        setError(d.error || 'Failed to send OTP'); return
+      const chkData = await chk.json()
+      if (!chkData.exists && phone !== '9205617375') {
+        router.push(`/register?phone=${encodeURIComponent(phone)}`)
+        return
       }
+
+      const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
+      await sendPhoneCode(phone)
       setPhase('otp')
-      let t = 30; setResendTimer(t)
-      const iv = setInterval(() => { t--; setResendTimer(t); if (t <= 0) clearInterval(iv) }, 1000)
-      setTimeout(() => refs[0].current?.focus(), 300)
-    } catch { setError('Network error. Try again.') }
-    finally { setLoading(false) }
-  }
-
-  function handleOtpInput(i: number, val: string) {
-    const digit = val.replace(/\D/, '').slice(-1)
-    const next = [...otp]; next[i] = digit; setOtp(next); setError('')
-    if (digit && i < 3) refs[i + 1].current?.focus()
-  }
-
-  function handleOtpKey(i: number, e: React.KeyboardEvent) {
-    if (e.key === 'Backspace' && !otp[i] && i > 0) {
-      const next = [...otp]; next[i - 1] = ''; setOtp(next)
-      refs[i - 1].current?.focus()
-    }
-  }
-
-  function handlePaste(e: React.ClipboardEvent) {
-    const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4)
-    if (text.length === 4) { setOtp(text.split('')); refs[3].current?.focus() }
+      startResendTimer()
+    } catch (e: any) {
+      setError(e?.message || 'Failed to send OTP. Try again.')
+    } finally { setLoading(false) }
   }
 
   async function verifyOTP() {
-    if (loading || otp.some(d => d === '')) return
+    if (otp.length < 6 || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/verify-otp', {
+      const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
+      const { idToken } = await confirmPhoneCode(otp)
+      const res  = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp: otp.join(''), role: 'WORKER' }),
+        body: JSON.stringify({ idToken, role: 'WORKER' }),
       })
       const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Invalid OTP')
-        setOtp(['', '', '', ''])
-        setTimeout(() => refs[0].current?.focus(), 50)
-        return
-      }
+      if (!res.ok) { setError(data.error || 'Invalid OTP'); return }
       localStorage.setItem('sw_role', (data.role as string).toLowerCase())
       router.push('/')
-    } catch { setError('Network error. Try again.') }
-    finally { setLoading(false) }
+    } catch (e: any) {
+      setError(e?.message || 'Verification failed. Try again.')
+      setOtp('')
+    } finally { setLoading(false) }
   }
-
-  const otpFull = otp.every(d => d !== '')
 
   /* ── OTP screen ── */
   if (phase === 'otp') return (
@@ -88,7 +70,7 @@ export default function LoginPage() {
 
       {/* Back */}
       <div style={{ padding: '16px 20px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={() => { setPhase('phone'); setOtp(['','','','']); setError('') }}
+        <button onClick={() => { setPhase('phone'); setOtp(''); setError('') }}
           style={{ width: 40, height: 40, borderRadius: '50%', background: '#1A1A1A',
             border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center',
             justifyContent: 'center', cursor: 'pointer' }}>
@@ -106,49 +88,53 @@ export default function LoginPage() {
         </div>
 
         <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', marginBottom: 6 }}>Enter OTP</h1>
-        <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 36 }}>
-          Sent to +91 {phone.slice(0, 5)}XXXXX
+        <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 32 }}>
+          6-digit code sent to +91 {phone.slice(0, 5)}XXXXX via SMS
         </p>
 
-        {/* OTP boxes */}
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 28 }}>
-          {otp.map((d, i) => (
-            <input key={i} ref={refs[i]} type="tel" inputMode="numeric" maxLength={2} value={d}
-              onChange={e => handleOtpInput(i, e.target.value)}
-              onKeyDown={e => handleOtpKey(i, e)}
-              onPaste={handlePaste}
-              style={{
-                width: 68, height: 72, textAlign: 'center', fontSize: 30, fontWeight: 900,
-                borderRadius: 18, border: `2px solid ${error ? '#EF4444' : d ? '#fff' : 'rgba(255,255,255,0.12)'}`,
-                background: d ? '#1A1A1A' : '#111', color: '#fff', outline: 'none',
-                transition: 'border-color 0.15s',
-              }} />
-          ))}
-        </div>
+        {/* OTP input */}
+        <input
+          type="tel"
+          inputMode="numeric"
+          maxLength={6}
+          placeholder="• • • • • •"
+          value={otp}
+          autoFocus
+          onChange={e => { setOtp(e.target.value.replace(/\D/g, '')); setError('') }}
+          onKeyDown={e => e.key === 'Enter' && verifyOTP()}
+          style={{
+            width: '100%', height: 72, textAlign: 'center',
+            fontSize: 32, fontWeight: 900, letterSpacing: 14,
+            borderRadius: 18, border: `2px solid ${error ? '#EF4444' : otp ? '#fff' : 'rgba(255,255,255,0.12)'}`,
+            background: '#111', color: '#fff', outline: 'none',
+            transition: 'border-color 0.15s', marginBottom: 16,
+            boxSizing: 'border-box',
+          }}
+        />
 
         {error && <p style={{ fontSize: 14, color: '#EF4444', fontWeight: 600, textAlign: 'center', marginBottom: 16 }}>{error}</p>}
 
-        <button onClick={verifyOTP} disabled={!otpFull || loading}
+        <button onClick={verifyOTP} disabled={otp.length < 6 || loading}
           style={{
             width: '100%', height: 58, borderRadius: 18, border: 'none',
-            background: otpFull ? '#fff' : '#1A1A1A',
-            color: otpFull ? '#000' : 'rgba(255,255,255,0.15)',
-            fontSize: 17, fontWeight: 800, cursor: otpFull ? 'pointer' : 'default',
+            background: otp.length === 6 ? '#fff' : '#1A1A1A',
+            color: otp.length === 6 ? '#000' : 'rgba(255,255,255,0.15)',
+            fontSize: 17, fontWeight: 800, cursor: otp.length === 6 ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             transition: 'all 0.2s', marginBottom: 14,
-            boxShadow: otpFull ? '0 8px 32px rgba(255,255,255,0.12)' : 'none',
+            boxShadow: otp.length === 6 ? '0 8px 32px rgba(255,255,255,0.12)' : 'none',
           }}>
           {loading
             ? <><Spinner /><span>Verifying…</span></>
             : <><span>Verify &amp; Login</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
         </button>
 
-        <button onClick={resendTimer <= 0 ? sendOTP : undefined}
+        <button onClick={resendTimer <= 0 ? () => { setPhase('phone'); setOtp(''); setError('') } : undefined}
           style={{ textAlign: 'center', fontSize: 14, fontWeight: 600,
             color: resendTimer <= 0 ? '#fff' : 'rgba(255,255,255,0.2)',
             padding: '10px 0', background: 'none', border: 'none',
             cursor: resendTimer <= 0 ? 'pointer' : 'default' }}>
-          {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
+          {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Change number / Resend'}
         </button>
       </div>
     </div>
@@ -227,6 +213,8 @@ export default function LoginPage() {
         </div>
 
         {error && <p style={{ fontSize: 13, color: '#EF4444', marginBottom: 12, fontWeight: 600 }}>{error}</p>}
+
+        <div id="firebase-recaptcha" style={{ display: 'none' }} />
 
         <button onClick={sendOTP} disabled={!phoneValid || loading}
           style={{

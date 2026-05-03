@@ -8,8 +8,6 @@ const T2   = 'rgba(0,0,0,0.5)'
 const BLUE = '#111111'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
-const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
-
 export default function CaptainLoginPage() {
   const router = useRouter()
   const [phone, setPhone] = useState('')
@@ -22,20 +20,8 @@ export default function CaptainLoginPage() {
     if (phone.length !== 10) { setError('Enter a valid 10-digit number'); return }
     setLoading(true); setError('')
     try {
-      if (useFirebase) {
-        const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
-        await sendPhoneCode(phone)
-      } else {
-        const res  = await fetch('/api/auth/send-otp', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, mode: 'login' }),
-        })
-        const data = await res.json()
-        if (!res.ok) {
-          if (data.notRegistered) { router.push(`/captain/register?phone=${phone}`); return }
-          setError(data.error || 'Failed to send OTP'); return
-        }
-      }
+      const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
+      await sendPhoneCode(phone)
       setPhase('otp')
     } catch (e: any) {
       setError(e?.message || 'Failed to send OTP')
@@ -43,25 +29,16 @@ export default function CaptainLoginPage() {
   }
 
   async function verifyOTP() {
-    if (otp.length < 4) { setError('Enter the OTP'); return }
+    if (otp.length < 6) { setError('Enter the 6-digit OTP'); return }
     setLoading(true); setError('')
     try {
-      let res, data
-      if (useFirebase) {
-        const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
-        const { idToken } = await confirmPhoneCode(otp)
-        res  = await fetch('/api/auth/firebase-verify', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken, role: 'CAPTAIN' }),
-        })
-        data = await res.json()
-      } else {
-        res  = await fetch('/api/auth/verify-otp', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, otp, role: 'CAPTAIN' }),
-        })
-        data = await res.json()
-      }
+      const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
+      const { idToken } = await confirmPhoneCode(otp)
+      const res  = await fetch('/api/auth/firebase-verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken, role: 'CAPTAIN' }),
+      })
+      const data = await res.json()
       if (!res.ok) { setError(data.error || 'Invalid OTP'); return }
       if (data.role !== 'CAPTAIN') { setError('Not a captain account'); return }
       router.replace('/captain')
@@ -96,7 +73,7 @@ export default function CaptainLoginPage() {
               style={{ fontSize: 18, fontWeight: 600, letterSpacing: 2 }}
             />
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
-            <div id="firebase-recaptcha" style={{ marginTop: 12, minHeight: 78 }} />
+            <div id="firebase-recaptcha" style={{ display: 'none' }} />
             <button
               className="btn btn-primary btn-lg btn-full"
               style={{ marginTop: 20, borderRadius: 14 }}
@@ -119,7 +96,7 @@ export default function CaptainLoginPage() {
               type="tel"
               inputMode="numeric"
               maxLength={6}
-              placeholder="4-digit OTP"
+              placeholder="6-digit OTP"
               value={otp}
               onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
               onKeyDown={e => e.key === 'Enter' && verifyOTP()}
@@ -130,7 +107,7 @@ export default function CaptainLoginPage() {
               className="btn btn-primary btn-lg btn-full"
               style={{ marginTop: 20, borderRadius: 14 }}
               onClick={verifyOTP}
-              disabled={loading || otp.length < 4}
+              disabled={loading || otp.length < 6}
             >
               {loading ? 'Verifying…' : 'Verify & Login'}
             </button>

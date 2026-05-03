@@ -9,8 +9,6 @@ const T2   = 'rgba(255,255,255,0.4)'
 const BD   = 'rgba(255,255,255,0.08)'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
-const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
-
 export default function OpsLoginPage() {
   const router = useRouter()
   const [phone,   setPhone]   = useState('')
@@ -23,17 +21,8 @@ export default function OpsLoginPage() {
     if (phone.length !== 10) { setError('Enter a valid 10-digit number'); return }
     setLoading(true); setError('')
     try {
-      if (useFirebase) {
-        const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
-        await sendPhoneCode(phone)
-      } else {
-        const res  = await fetch('/api/auth/send-otp', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, mode: 'register' }),
-        })
-        const data = await res.json()
-        if (!res.ok) { setError(data.error || 'Failed to send OTP'); return }
-      }
+      const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
+      await sendPhoneCode(phone)
       setPhase('otp')
     } catch (e: any) {
       setError(e?.message || 'Failed to send OTP')
@@ -41,25 +30,16 @@ export default function OpsLoginPage() {
   }
 
   async function verifyOTP() {
-    if (otp.length < 4) return
+    if (otp.length < 6) return
     setLoading(true); setError('')
     try {
-      let res, data
-      if (useFirebase) {
-        const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
-        const { idToken } = await confirmPhoneCode(otp)
-        res  = await fetch('/api/auth/firebase-verify', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken, role: 'OPS' }),
-        })
-        data = await res.json()
-      } else {
-        res  = await fetch('/api/auth/verify-otp', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, otp, role: 'OPS' }),
-        })
-        data = await res.json()
-      }
+      const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
+      const { idToken } = await confirmPhoneCode(otp)
+      const res  = await fetch('/api/auth/firebase-verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken, role: 'OPS' }),
+      })
+      const data = await res.json()
       if (!res.ok) { setError(data.error || 'Invalid OTP'); return }
       if (data.role !== 'OPS') { setError('Not an Ops account'); return }
       router.replace('/ops')
@@ -87,7 +67,7 @@ export default function OpsLoginPage() {
               onKeyDown={e => e.key === 'Enter' && sendOTP()}
             />
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
-            <div id="firebase-recaptcha" style={{ marginTop: 12, minHeight: 78 }} />
+            <div id="firebase-recaptcha" style={{ display: 'none' }} />
             <button onClick={sendOTP} disabled={loading || phone.length !== 10}
               style={{ width: '100%', marginTop: 16, padding: '14px', borderRadius: 12, background: T1, color: '#000000', fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer', opacity: phone.length !== 10 ? 0.4 : 1 }}>
               {loading ? 'Verify & Send OTP…' : 'Send OTP'}
@@ -95,7 +75,7 @@ export default function OpsLoginPage() {
           </>
         ) : (
           <>
-            <p style={{ color: T2, fontSize: 14, marginBottom: 12 }}>OTP sent to +91 {phone}</p>
+            <p style={{ color: T2, fontSize: 14, marginBottom: 12 }}>6-digit OTP sent to +91 {phone}</p>
             <input
               style={{ width: '100%', background: '#1C1C1C', border: `1px solid ${BD}`, borderRadius: 12, padding: '14px 16px', color: T1, fontSize: 28, fontWeight: 800, letterSpacing: 12, textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
               type="tel" inputMode="numeric" maxLength={6} placeholder="OTP"
@@ -104,8 +84,8 @@ export default function OpsLoginPage() {
               autoFocus
             />
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
-            <button onClick={verifyOTP} disabled={loading || otp.length < 4}
-              style={{ width: '100%', marginTop: 16, padding: '14px', borderRadius: 12, background: T1, color: '#000000', fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer', opacity: otp.length < 4 ? 0.4 : 1 }}>
+            <button onClick={verifyOTP} disabled={loading || otp.length < 6}
+              style={{ width: '100%', marginTop: 16, padding: '14px', borderRadius: 12, background: T1, color: '#000000', fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer', opacity: otp.length < 6 ? 0.4 : 1 }}>
               {loading ? 'Verifying…' : 'Login'}
             </button>
             <button onClick={() => { setPhase('phone'); setOtp(''); setError('') }}

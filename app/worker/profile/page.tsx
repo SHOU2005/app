@@ -3,10 +3,11 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   MapPin, ChevronRight, Shield, Bell, HelpCircle,
-  LogOut, Edit2, CheckCircle, Gift, Copy, Share2, Briefcase, Camera,
+  LogOut, Edit2, CheckCircle, Gift, Copy, Share2, Briefcase, Camera, Globe,
 } from 'lucide-react'
 import TopBar    from '@/components/shared/TopBar'
 import BottomNav from '@/components/shared/BottomNav'
+import { LANGUAGES } from '@/lib/lang'
 
 const SKILLS = [
   { label:'Shop Helper', emoji:'🏪' },
@@ -16,17 +17,20 @@ const SKILLS = [
   { label:'Warehouse',   emoji:'🏭' },
   { label:'Cleaning',    emoji:'🧹' },
 ]
-const LANGUAGES = ['Hindi', 'English', 'Marathi']
+const SPOKEN_LANGUAGES = ['Hindi', 'English', 'Marathi']
 
 const MENU_ITEMS = [
   { icon:Shield,     label:'Aadhaar Verified', sub:'Your ID is verified',      color:'#111111', bg:'rgba(0,0,0,0.07)',     action:''         },
   { icon:Bell,       label:'Notifications',    sub:'Job alerts are on',        color:'#111111', bg:'rgba(0,0,0,0.07)',     action:''         },
+  { icon:Globe,      label:'Change Language',  sub:'',                         color:'#111111', bg:'rgba(0,0,0,0.07)',     action:'language' },
   { icon:HelpCircle, label:'Help & Support',   sub:'Chat on WhatsApp',         color:'#111111', bg:'rgba(0,0,0,0.07)',     action:'whatsapp' },
   { icon:LogOut,     label:'Log Out',          sub:'',                         color:'#FF3B30', bg:'rgba(255,59,48,0.1)',  action:'logout'   },
 ]
 
 export default function ProfilePage() {
   const router = useRouter()
+  const currentLang = typeof window !== 'undefined' ? localStorage.getItem('sw_lang') || 'en' : 'en'
+  const currentLangLabel = LANGUAGES.find(l => l.code === currentLang)?.label || 'English'
   const [editing,      setEditing]      = useState(false)
   const [name,         setName]         = useState('Raju Yadav')
   const [phone,        setPhone]        = useState('+91 98765 43210')
@@ -339,7 +343,7 @@ export default function ProfilePage() {
             <div className="px-4 py-4">
               <p style={{ fontSize:14, fontWeight:700, color:'rgba(0,0,0,0.4)', marginBottom:10 }}>Languages I Speak</p>
               <div className="flex gap-2 flex-wrap">
-                {LANGUAGES.map(l => (
+                {SPOKEN_LANGUAGES.map(l => (
                   <span key={l} className="px-3 py-1.5 rounded-full"
                     style={{ background:'rgba(0,0,0,0.06)', color:'rgba(0,0,0,0.6)', fontSize:13, fontWeight:600, border:'1px solid rgba(0,0,0,0.08)' }}>
                     {l}
@@ -360,6 +364,7 @@ export default function ProfilePage() {
                   onClick={() => {
                     if (action==='logout') { localStorage.removeItem('sw_perms'); localStorage.removeItem('sw_role'); router.push('/login') }
                     if (action==='whatsapp') window.open('https://wa.me/918368828660?text=Hi%2C%20I%20need%20help%20with%20Switch', '_blank')
+                    if (action==='language') router.push('/language')
                   }}
                   className="w-full flex items-center gap-3 px-4 py-4 text-left">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -368,7 +373,11 @@ export default function ProfilePage() {
                   </div>
                   <div className="flex-1">
                     <p style={{ fontSize:15, fontWeight:600, color: action==='logout' ? '#DC2626' : '#111111' }}>{label}</p>
-                    {sub && <p style={{ fontSize:13, color:'rgba(0,0,0,0.38)', marginTop:2 }}>{sub}</p>}
+                    {(sub || action==='language') && (
+                      <p style={{ fontSize:13, color:'rgba(0,0,0,0.38)', marginTop:2 }}>
+                        {action==='language' ? currentLangLabel : sub}
+                      </p>
+                    )}
                   </div>
                   {action!=='logout' && <ChevronRight style={{ width:17, height:17, color:'rgba(0,0,0,0.25)' }} />}
                 </button>

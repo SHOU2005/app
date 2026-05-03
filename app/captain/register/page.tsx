@@ -1,7 +1,6 @@
 'use client'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense } from 'react'
 
 const BG   = '#FFFFFF'
 const T1   = '#111111'
@@ -21,36 +20,39 @@ function RegisterForm() {
   const [error,   setError]   = useState('')
 
   async function sendOTP() {
-    if (!name || phone.length !== 10) { setError('Fill all required fields'); return }
+    if (!name.trim() || phone.length !== 10) { setError('Fill all required fields'); return }
     setLoading(true); setError('')
-    const res = await fetch('/api/auth/send-otp', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ phone, mode: 'register' }),
-    })
-    const data = await res.json()
-    setLoading(false)
-    if (!res.ok) { setError(data.error || 'Failed'); return }
-    setPhase('otp')
+    try {
+      const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
+      await sendPhoneCode(phone)
+      setPhase('otp')
+    } catch (e: any) {
+      setError(e?.message || 'Failed to send OTP. Try again.')
+    } finally { setLoading(false) }
   }
 
   async function verifyOTP() {
+    if (otp.length < 6) { setError('Enter the 6-digit OTP'); return }
     setLoading(true); setError('')
-    const res = await fetch('/api/auth/verify-otp', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ phone, otp, role: 'CAPTAIN' }),
-    })
-    const data = await res.json()
-    if (!res.ok) { setLoading(false); setError(data.error || 'Invalid OTP'); return }
-    // Update name and city
-    await fetch('/api/captain/profile', {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ name, city }),
-    })
-    setLoading(false)
-    router.replace('/captain')
+    try {
+      const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
+      const { idToken } = await confirmPhoneCode(otp)
+      const res  = await fetch('/api/auth/firebase-verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken, role: 'CAPTAIN' }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Invalid OTP'); return }
+      // Patch name and city after account is created
+      await fetch('/api/captain/profile', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), city: city.trim() }),
+      })
+      router.replace('/captain')
+    } catch (e: any) {
+      setError(e?.message || 'Verification failed. Try again.')
+      setOtp('')
+    } finally { setLoading(false) }
   }
 
   return (
@@ -62,9 +64,9 @@ function RegisterForm() {
         {phase === 'form' ? (
           <>
             {[
-              { label: 'Full Name *', value: name, setter: setName, placeholder: 'Your name', type: 'text' },
-              { label: 'Mobile Number *', value: phone, setter: setPhone, placeholder: '10-digit number', type: 'tel', maxLen: 10, numeric: true },
-              { label: 'City / Territory', value: city, setter: setCity, placeholder: 'e.g. Bangalore', type: 'text' },
+              { label: 'Full Name *',        value: name,  setter: setName,  placeholder: 'Your name',       type: 'text',   maxLen: undefined, numeric: false },
+              { label: 'Mobile Number *',    value: phone, setter: setPhone, placeholder: '10-digit number', type: 'tel',    maxLen: 10,        numeric: true  },
+              { label: 'City / Territory',   value: city,  setter: setCity,  placeholder: 'e.g. Bangalore',  type: 'text',   maxLen: undefined, numeric: false },
             ].map(f => (
               <div key={f.label} style={{ marginBottom: 16 }}>
                 <label style={{ fontSize: 13, fontWeight: 600, color: T2, display: 'block', marginBottom: 6 }}>{f.label}</label>
@@ -80,7 +82,13 @@ function RegisterForm() {
               </div>
             ))}
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 4 }}>{error}</p>}
-            <button className="btn btn-primary btn-lg btn-full" style={{ marginTop: 8, borderRadius: 14, background: BLUE }} onClick={sendOTP} disabled={loading}>
+            <div id="firebase-recaptcha" style={{ display: 'none' }} />
+            <button
+              className="btn btn-primary btn-lg btn-full"
+              style={{ marginTop: 16, borderRadius: 14, background: BLUE }}
+              onClick={sendOTP}
+              disabled={loading || !name.trim() || phone.length !== 10}
+            >
               {loading ? 'Sending OTP…' : 'Continue →'}
             </button>
             <p style={{ textAlign: 'center', marginTop: 20, color: T2, fontSize: 14 }}>
@@ -89,18 +97,31 @@ function RegisterForm() {
           </>
         ) : (
           <>
-            <p style={{ color: T2, marginBottom: 16, fontSize: 14 }}>OTP sent to +91 {phone}</p>
+            <p style={{ color: T2, marginBottom: 16, fontSize: 14 }}>6-digit OTP sent to +91 {phone}</p>
             <label style={{ fontSize: 13, fontWeight: 600, color: T2, display: 'block', marginBottom: 8 }}>Enter OTP</label>
             <input
               className="field"
-              type="tel" inputMode="numeric" maxLength={6} placeholder="OTP"
+              type="tel" inputMode="numeric" maxLength={6} placeholder="6-digit OTP"
               value={otp}
+              autoFocus
               onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+              onKeyDown={e => e.key === 'Enter' && verifyOTP()}
               style={{ fontSize: 24, fontWeight: 700, letterSpacing: 8, textAlign: 'center' }}
             />
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
-            <button className="btn btn-primary btn-lg btn-full" style={{ marginTop: 20, borderRadius: 14, background: BLUE }} onClick={verifyOTP} disabled={loading || otp.length < 4}>
+            <button
+              className="btn btn-primary btn-lg btn-full"
+              style={{ marginTop: 20, borderRadius: 14, background: BLUE }}
+              onClick={verifyOTP}
+              disabled={loading || otp.length < 6}
+            >
               {loading ? 'Registering…' : 'Register'}
+            </button>
+            <button
+              style={{ display: 'block', margin: '12px auto 0', background: 'none', border: 'none', color: BLUE, fontWeight: 600, cursor: 'pointer', fontSize: 14 }}
+              onClick={() => { setPhase('form'); setOtp(''); setError('') }}
+            >
+              ← Change number
             </button>
           </>
         )}

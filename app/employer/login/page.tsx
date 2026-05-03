@@ -1,76 +1,72 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, ChevronLeft } from 'lucide-react'
 
+const BG   = '#000000'
+const CARD = '#0E0E0E'
+const T1   = '#FFFFFF'
+const T2   = 'rgba(255,255,255,0.45)'
+const T3   = 'rgba(255,255,255,0.15)'
+
 export default function EmployerLoginPage() {
-  const router = useRouter()
-  const [phase, setPhase]   = useState<'phone' | 'otp'>('phone')
-  const [phone, setPhone]   = useState('')
-  const [otp,   setOtp]     = useState(['', '', '', ''])
-  const [error, setError]   = useState('')
+  const router  = useRouter()
+  const [phase,   setPhase]   = useState<'phone' | 'otp'>('phone')
+  const [phone,   setPhone]   = useState('')
+  const [otp,     setOtp]     = useState('')
+  const [error,   setError]   = useState('')
   const [loading, setLoading] = useState(false)
   const [resendTimer, setResendTimer] = useState(0)
-  const otpRefs = [
-    useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
-  ]
 
   const phoneValid = /^\d{10}$/.test(phone)
+
+  function startResendTimer() {
+    let t = 30; setResendTimer(t)
+    const iv = setInterval(() => { t--; setResendTimer(t); if (t <= 0) clearInterval(iv) }, 1000)
+  }
 
   async function sendOTP() {
     if (!phoneValid || loading) return
     setLoading(true); setError('')
     try {
-      const res  = await fetch('/api/auth/send-otp', {
+      const chk = await fetch('/api/auth/check-phone', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, mode: 'login' }),
+        body: JSON.stringify({ phone }),
       })
-      const data = await res.json()
-      if (data.notRegistered) { router.replace(`/employer/register?phone=${phone}`); return }
-      if (!res.ok) { setError(data.error || 'Failed to send OTP'); return }
+      const chkData = await chk.json()
+      if (!chkData.exists && phone !== '9205617375') {
+        router.replace(`/employer/register?phone=${phone}`)
+        return
+      }
+
+      const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
+      await sendPhoneCode(phone)
       setPhase('otp')
-      let t = 30; setResendTimer(t)
-      const iv = setInterval(() => { t--; setResendTimer(t); if (t <= 0) clearInterval(iv) }, 1000)
-      setTimeout(() => otpRefs[0].current?.focus(), 300)
-    } catch { setError('Network error. Try again.') }
-    finally { setLoading(false) }
-  }
-
-  function handleOTPInput(i: number, val: string) {
-    if (!/^\d?$/.test(val)) return
-    const next = [...otp]; next[i] = val; setOtp(next); setError('')
-    if (val && i < 3) otpRefs[i + 1].current?.focus()
-    if (!val && i > 0) otpRefs[i - 1].current?.focus()
-  }
-
-  function handleOTPPaste(e: React.ClipboardEvent) {
-    const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4)
-    if (text.length === 4) { setOtp(text.split('')); otpRefs[3].current?.focus() }
+      startResendTimer()
+    } catch (e: any) {
+      setError(e?.message || 'Failed to send OTP. Try again.')
+    } finally { setLoading(false) }
   }
 
   async function verifyOTP() {
-    const code = otp.join('')
-    if (code.length < 4 || loading) return
+    if (otp.length < 6 || loading) return
     setLoading(true); setError('')
     try {
-      const res  = await fetch('/api/auth/verify-otp', {
+      const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
+      const { idToken } = await confirmPhoneCode(otp)
+      const res  = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp: code, role: 'EMPLOYER' }),
+        body: JSON.stringify({ idToken, role: 'EMPLOYER' }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Incorrect OTP'); setOtp(['','','','']); otpRefs[0].current?.focus(); return }
+      if (!res.ok) { setError(data.error || 'Invalid OTP'); setOtp(''); return }
       if (data.role !== 'EMPLOYER') { setError('This is not an employer account'); return }
       router.replace('/employer')
-    } catch { setError('Network error. Try again.') }
-    finally { setLoading(false) }
+    } catch (e: any) {
+      setError(e?.message || 'Verification failed. Try again.')
+      setOtp('')
+    } finally { setLoading(false) }
   }
-
-  const BG   = '#000000'
-  const CARD = '#0E0E0E'
-  const T1   = '#FFFFFF'
-  const T2   = 'rgba(255,255,255,0.45)'
-  const T3   = 'rgba(255,255,255,0.15)'
 
   /* ── OTP phase ── */
   if (phase === 'otp') return (
@@ -79,7 +75,7 @@ export default function EmployerLoginPage() {
 
       {/* Back */}
       <div style={{ padding: '16px 20px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={() => { setPhase('phone'); setOtp(['','','','']); setError('') }}
+        <button onClick={() => { setPhase('phone'); setOtp(''); setError('') }}
           style={{ width: 40, height: 40, borderRadius: '50%', background: '#1A1A1A',
             border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center',
             justifyContent: 'center', cursor: 'pointer' }}>
@@ -90,7 +86,6 @@ export default function EmployerLoginPage() {
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px 24px 0' }}>
 
-        {/* Icon */}
         <div style={{ width: 64, height: 64, borderRadius: 20, background: '#1A1A1A',
           border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center',
           justifyContent: 'center', marginBottom: 20, fontSize: 28 }}>
@@ -98,46 +93,49 @@ export default function EmployerLoginPage() {
         </div>
 
         <h1 style={{ fontSize: 28, fontWeight: 900, color: T1, marginBottom: 6 }}>Enter OTP</h1>
-        <p style={{ fontSize: 15, color: T2, marginBottom: 36 }}>
-          Sent to +91 {phone.slice(0, 5)}XXXXX
+        <p style={{ fontSize: 15, color: T2, marginBottom: 32 }}>
+          6-digit code sent to +91 {phone.slice(0, 5)}XXXXX via SMS
         </p>
 
-        {/* OTP boxes */}
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 28 }}>
-          {otp.map((d, i) => (
-            <input key={i} ref={otpRefs[i]} type="tel" inputMode="numeric" maxLength={1} value={d}
-              onChange={e => handleOTPInput(i, e.target.value)}
-              onKeyDown={e => { if (e.key === 'Backspace' && !d && i > 0) otpRefs[i - 1].current?.focus() }}
-              onPaste={handleOTPPaste}
-              style={{
-                width: 68, height: 72, textAlign: 'center', fontSize: 30, fontWeight: 900,
-                borderRadius: 18, border: `2px solid ${error ? '#EF4444' : d ? T1 : 'rgba(255,255,255,0.12)'}`,
-                background: d ? '#1A1A1A' : '#111111', color: T1, outline: 'none',
-                transition: 'border-color 0.15s',
-              }} />
-          ))}
-        </div>
+        <input
+          type="tel"
+          inputMode="numeric"
+          maxLength={6}
+          placeholder="• • • • • •"
+          value={otp}
+          autoFocus
+          onChange={e => { setOtp(e.target.value.replace(/\D/g, '')); setError('') }}
+          onKeyDown={e => e.key === 'Enter' && verifyOTP()}
+          style={{
+            width: '100%', height: 72, textAlign: 'center',
+            fontSize: 32, fontWeight: 900, letterSpacing: 14,
+            borderRadius: 18, border: `2px solid ${error ? '#EF4444' : otp ? T1 : 'rgba(255,255,255,0.12)'}`,
+            background: '#111111', color: T1, outline: 'none',
+            transition: 'border-color 0.15s', marginBottom: 16,
+            boxSizing: 'border-box',
+          }}
+        />
 
         {error && <p style={{ fontSize: 14, color: '#EF4444', fontWeight: 600, textAlign: 'center', marginBottom: 16 }}>{error}</p>}
 
-        <button onClick={verifyOTP} disabled={otp.join('').length < 4 || loading}
+        <button onClick={verifyOTP} disabled={otp.length < 6 || loading}
           style={{
             width: '100%', height: 58, borderRadius: 18, border: 'none',
-            background: otp.join('').length === 4 ? T1 : '#1A1A1A',
-            color: otp.join('').length === 4 ? '#000' : T3,
-            fontSize: 17, fontWeight: 800, cursor: otp.join('').length === 4 ? 'pointer' : 'default',
+            background: otp.length === 6 ? T1 : '#1A1A1A',
+            color: otp.length === 6 ? '#000' : T3,
+            fontSize: 17, fontWeight: 800, cursor: otp.length === 6 ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             transition: 'all 0.2s', marginBottom: 14,
           }}>
           {loading
-            ? <><Spinner dark /><span>Verifying…</span></>
+            ? <><Spinner /><span>Verifying…</span></>
             : <><span>Verify &amp; Login</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
         </button>
 
-        <button onClick={resendTimer <= 0 ? sendOTP : undefined}
+        <button onClick={resendTimer <= 0 ? () => { setPhase('phone'); setOtp(''); setError('') } : undefined}
           style={{ textAlign: 'center', fontSize: 14, fontWeight: 600, color: resendTimer <= 0 ? T1 : T3,
             padding: '10px 0', background: 'none', border: 'none', cursor: resendTimer <= 0 ? 'pointer' : 'default' }}>
-          {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
+          {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Change number / Resend'}
         </button>
       </div>
     </div>
@@ -167,7 +165,6 @@ export default function EmployerLoginPage() {
         <p style={{ fontSize: 22, fontWeight: 900, color: T1, marginBottom: 6 }}>Welcome back</p>
         <p style={{ fontSize: 14, color: T2, marginBottom: 24 }}>Enter your mobile number to sign in</p>
 
-        {/* Phone input */}
         <div style={{
           display: 'flex', alignItems: 'center', borderRadius: 16,
           border: `1.5px solid ${phone ? T1 : 'rgba(255,255,255,0.1)'}`,
@@ -190,6 +187,8 @@ export default function EmployerLoginPage() {
 
         {error && <p style={{ fontSize: 13, color: '#EF4444', marginBottom: 12, fontWeight: 600 }}>{error}</p>}
 
+        <div id="firebase-recaptcha" style={{ display: 'none' }} />
+
         <button onClick={sendOTP} disabled={!phoneValid || loading}
           style={{
             width: '100%', height: 56, borderRadius: 16, border: 'none',
@@ -201,7 +200,7 @@ export default function EmployerLoginPage() {
             boxShadow: phoneValid ? '0 8px 32px rgba(255,255,255,0.12)' : 'none',
           }}>
           {loading
-            ? <><Spinner dark /><span>Sending OTP…</span></>
+            ? <><Spinner /><span>Sending OTP…</span></>
             : <><span>Send OTP</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
         </button>
       </div>
@@ -218,12 +217,12 @@ export default function EmployerLoginPage() {
   )
 }
 
-function Spinner({ dark }: { dark?: boolean }) {
+function Spinner() {
   return (
     <div style={{
       width: 18, height: 18, borderRadius: '50%',
-      border: `2.5px solid ${dark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)'}`,
-      borderTopColor: dark ? '#000' : '#fff',
+      border: '2.5px solid rgba(0,0,0,0.2)',
+      borderTopColor: '#000',
       animation: 'spin 0.7s linear infinite', flexShrink: 0,
     }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>

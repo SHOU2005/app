@@ -14,7 +14,7 @@ function loadScript(src: string): Promise<void> {
     const s = document.createElement('script')
     s.src = src
     s.onload  = () => resolve()
-    s.onerror = () => reject(new Error(`Failed to load Firebase scripts`))
+    s.onerror = () => reject(new Error('Failed to load Firebase scripts'))
     document.head.appendChild(s)
   })
 }
@@ -37,36 +37,20 @@ function clearVerifier() {
   }
 }
 
-// Renders a visible "I'm not a robot" checkbox and waits for the user to tick it.
-// Visible reCAPTCHA works in Capacitor WebView as long as the domain is in Firebase
-// Authorized Domains (Firebase Console → Authentication → Settings → Authorized domains).
-function waitForRecaptcha(auth: any, containerId: string): Promise<void> {
-  clearVerifier()
-  return new Promise((resolve, reject) => {
-    verifier = new (window as any).firebase.auth.RecaptchaVerifier(containerId, {
-      size: 'normal',
-      callback: () => resolve(),
-      'expired-callback': () => {
-        clearVerifier()
-        reject(new Error('Verification expired. Tap Send OTP again.'))
-      },
-    }, auth.app)
-    verifier.render().catch(reject)
-  })
-}
-
 export async function sendPhoneCode(phoneDigits: string): Promise<string> {
   const auth = await getFirebaseAuth()
-  const containerId = 'firebase-recaptcha'
 
-  // Make container visible so user can see and tap the checkbox
-  const el = document.getElementById(containerId)
-  if (el) { el.style.display = 'flex'; el.style.justifyContent = 'center' }
+  // Always start fresh — stale verifiers cause silent failures
+  clearVerifier()
 
-  await waitForRecaptcha(auth, containerId)
-
-  // Hide after solved
-  if (el) el.style.display = 'none'
+  // Invisible reCAPTCHA: solved automatically by Google, no checkbox shown to users.
+  // Requires the app domain to be listed in Firebase Console →
+  // Authentication → Settings → Authorized domains.
+  verifier = new (window as any).firebase.auth.RecaptchaVerifier(
+    'firebase-recaptcha',
+    { size: 'invisible' },
+    auth.app,
+  )
 
   try {
     const result = await auth.signInWithPhoneNumber(`+91${phoneDigits}`, verifier)

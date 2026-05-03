@@ -123,57 +123,38 @@ function RegisterPageInner() {
 
   const [loading,   setLoading]   = useState(false)
   const [otpPhase,  setOtpPhase]  = useState<'info'|'otp'>('info')
-  const [otp,       setOtp]       = useState(['','','',''])
+  const [otp,       setOtp]       = useState(['','','','','',''])
   const [otpError,  setOtpError]  = useState('')
   const otpRefs = [
     useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
   ]
-
-  const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
 
   async function sendOtp() {
     if (phone.length < 10) return
     setLoading(true)
     try {
-      if (useFirebase) {
-        const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
-        await sendPhoneCode(phone)
-      } else {
-        const res = await fetch('/api/auth/send-otp', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ phone }),
-        })
-        if (!res.ok) { setLoading(false); return }
-      }
+      const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
+      await sendPhoneCode(phone)
       setOtpPhase('otp'); setTimeout(() => otpRefs[0].current?.focus(), 200)
-    } catch {}
+    } catch (e: any) { setOtpError(e?.message || 'Failed to send OTP') }
     setLoading(false)
   }
 
   async function verifyOtp() {
     const code = otp.join('')
-    if (code.length < 4) return
+    if (code.length < 6) return
     setLoading(true); setOtpError('')
     try {
-      if (useFirebase) {
-        const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
-        const { idToken } = await confirmPhoneCode(code)
-        const res = await fetch('/api/auth/firebase-verify', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ idToken, role:'WORKER', referralCode: referralCode || undefined }),
-        })
-        if (res.ok) { localStorage.setItem('sw_role','worker'); go(2) }
-        else { const d = await res.json(); setOtpError(d.error||'Invalid OTP'); setOtp(['','','','']); setTimeout(() => otpRefs[0].current?.focus(), 50) }
-      } else {
-        const res = await fetch('/api/auth/verify-otp', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ phone, otp: code, role:'WORKER', referralCode: referralCode || undefined }),
-        })
-        const data = await res.json()
-        if (res.ok) { localStorage.setItem('sw_role','worker'); go(2) }
-        else { setOtpError(data.error||'Invalid OTP'); setOtp(['','','','']); setTimeout(() => otpRefs[0].current?.focus(), 50) }
-      }
+      const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
+      const { idToken } = await confirmPhoneCode(code)
+      const res = await fetch('/api/auth/firebase-verify', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ idToken, role:'WORKER', referralCode: referralCode || undefined }),
+      })
+      if (res.ok) { localStorage.setItem('sw_role','worker'); go(2) }
+      else { const d = await res.json(); setOtpError(d.error||'Invalid OTP'); setOtp(['','','','','','']); setTimeout(() => otpRefs[0].current?.focus(), 50) }
     } catch { setOtpError('Server unavailable. Try again.') }
     setLoading(false)
   }
@@ -181,7 +162,7 @@ function RegisterPageInner() {
   function handleOtpInput(i: number, val: string) {
     const d = val.replace(/\D/,'').slice(-1)
     const next = [...otp]; next[i] = d; setOtp(next); setOtpError('')
-    if (d && i < 3) otpRefs[i+1].current?.focus()
+    if (d && i < 5) otpRefs[i+1].current?.focus()
   }
 
   function handleOtpKey(i: number, e: React.KeyboardEvent) {
@@ -224,7 +205,7 @@ function RegisterPageInner() {
       {/* ── Top nav ── */}
       <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 20px 4px' }}>
         {step>1 || otpPhase==='otp' ? (
-          <button onClick={() => { if(otpPhase==='otp'){setOtpPhase('info');setOtp(['','','',''])}else if(step>1)go(step-1) }}
+          <button onClick={() => { if(otpPhase==='otp'){setOtpPhase('info');setOtp(['','','','','',''])}else if(step>1)go(step-1) }}
             style={{ width:40, height:40, borderRadius:'50%', background:'#F0F0F0',
               border:'1px solid rgba(0,0,0,0.1)', display:'flex', alignItems:'center',
               justifyContent:'center', flexShrink:0, cursor:'pointer' }}>
@@ -265,11 +246,11 @@ function RegisterPageInner() {
                 Sent to <span style={{ color:'#111111', fontWeight:700 }}>+91 {phone.slice(0,5)} {phone.slice(5)}</span>
               </p>
 
-              <div style={{ display:'flex', gap:12, justifyContent:'center', marginBottom:10 }}>
+              <div style={{ display:'flex', gap:8, justifyContent:'center', marginBottom:10 }}>
                 {otp.map((d,i) => (
-                  <input key={i} ref={otpRefs[i]} type="tel" inputMode="numeric" maxLength={2} value={d}
+                  <input key={i} ref={otpRefs[i]} type="tel" inputMode="numeric" maxLength={1} value={d}
                     onChange={e=>handleOtpInput(i,e.target.value)} onKeyDown={e=>handleOtpKey(i,e)}
-                    style={{ width:68, height:72, textAlign:'center', fontSize:30, fontWeight:900, borderRadius:18,
+                    style={{ width:48, height:60, textAlign:'center', fontSize:24, fontWeight:900, borderRadius:14,
                       border:`2px solid ${otpError?'#DC2626':d?'#111111':'rgba(0,0,0,0.15)'}`,
                       background:d?'rgba(0,0,0,0.05)':'#F5F5F5', color:'#111111', outline:'none' }} />
                 ))}
@@ -279,16 +260,16 @@ function RegisterPageInner() {
                 {otpError && <p style={{ fontSize:14, color:'#DC2626', fontWeight:600 }}>{otpError}</p>}
               </div>
 
-              <button onClick={verifyOtp} disabled={otp.join('').length<4||loading}
+              <button onClick={verifyOtp} disabled={otp.join('').length<6||loading}
                 style={{ width:'100%', height:56, borderRadius:16, fontSize:16, fontWeight:800, border:'none',
-                  background:otp.join('').length>=4?'#111111':'rgba(0,0,0,0.07)',
-                  color:otp.join('').length>=4?'#FFFFFF':'rgba(0,0,0,0.25)',
-                  boxShadow:otp.join('').length>=4?'0 8px 32px rgba(0,0,0,0.15)':'none',
+                  background:otp.join('').length>=6?'#111111':'rgba(0,0,0,0.07)',
+                  color:otp.join('').length>=6?'#FFFFFF':'rgba(0,0,0,0.25)',
+                  boxShadow:otp.join('').length>=6?'0 8px 32px rgba(0,0,0,0.15)':'none',
                   marginBottom:14, display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer' }}>
                 {loading ? 'Verifying…' : <><span>Verify &amp; Continue</span><ArrowRight style={{ width:18, height:18 }} /></>}
               </button>
 
-              <button onClick={() => {setOtpPhase('info');setOtp(['','','','']);setOtpError('')}}
+              <button onClick={() => {setOtpPhase('info');setOtp(['','','','','','']);setOtpError('')}}
                 style={{ width:'100%', background:'none', border:'none', fontSize:15, fontWeight:600,
                   color:'rgba(0,0,0,0.38)', padding:'10px 0', cursor:'pointer' }}>
                 ← Change number / Resend OTP
@@ -394,7 +375,7 @@ function RegisterPageInner() {
                     letterSpacing: 3, fontFamily: '"Courier New", monospace', boxSizing: 'border-box' as const }} />
               </div>
 
-              <div id="firebase-recaptcha" style={{ marginBottom: 8, minHeight: 78 }} />
+              <div id="firebase-recaptcha" style={{ display: 'none' }} />
               <button onClick={sendOtp} disabled={!step1Valid||loading}
                 style={{ width:'100%', height:56, borderRadius:16, fontSize:16, fontWeight:800, border:'none',
                   background:step1Valid?'#111111':'rgba(0,0,0,0.07)',
