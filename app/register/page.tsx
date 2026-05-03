@@ -130,7 +130,7 @@ function RegisterPageInner() {
     useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
   ]
 
-  const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
+  const useFirebase = false
 
   async function sendOtp() {
     if (phone.length < 10) return

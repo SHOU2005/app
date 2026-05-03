@@ -74,7 +74,7 @@ function RegisterInner() {
     if (!val && i > 0) otpRefs[i - 1].current?.focus()
   }
 
-  const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
+  const useFirebase = false
 
   async function sendOTP() {
     setLoading(true); setError('')

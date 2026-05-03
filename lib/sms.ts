@@ -1,6 +1,7 @@
 // SMS OTP sender — tries providers in order: Fast2SMS → 2Factor → Twilio → console (dev)
 
 async function sendFast2SMS(to: string, otp: string): Promise<void> {
+  // route 'otp' uses Fast2SMS OTP template — no DLT registration required
   const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
     method:  'POST',
     headers: {
@@ -8,11 +9,10 @@ async function sendFast2SMS(to: string, otp: string): Promise<void> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      route:    'q',
-      message:  `${otp} is your Switch OTP. Valid for 10 minutes.`,
-      language: 'english',
-      flash:    0,
-      numbers:  to,
+      route:     'otp',
+      variables_values: otp,
+      flash:     0,
+      numbers:   to,
     }),
   })
   const data = await res.json()
