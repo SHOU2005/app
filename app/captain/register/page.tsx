@@ -23,12 +23,8 @@ function RegisterForm() {
     if (!name.trim() || phone.length !== 10) { setError('Fill all required fields'); return }
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Failed to send OTP. Try again.'); return }
+      const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
+      await sendPhoneCode(phone)
       setPhase('otp')
     } catch (e: any) {
       setError(e?.message || 'Failed to send OTP. Try again.')
@@ -39,9 +35,11 @@ function RegisterForm() {
     if (otp.length < 6) { setError('Enter the 6-digit OTP'); return }
     setLoading(true); setError('')
     try {
-      const res  = await fetch('/api/auth/verify-otp', {
+      const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
+      const { idToken } = await confirmPhoneCode(otp)
+      const res = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp, role: 'CAPTAIN' }),
+        body: JSON.stringify({ idToken, role: 'CAPTAIN' }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Invalid OTP'); return }

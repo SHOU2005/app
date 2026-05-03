@@ -1,22 +1,24 @@
 'use client'
 
-const AUTH_CONFIG = {
-  apiKey:            process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY          || 'AIzaSyDA4N-yBgrNvPYXZP3MvbV81slAt3a5hCE',
-  authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN            || 'relay-15824.firebaseapp.com',
-  projectId:         process.env.NEXT_PUBLIC_FIREBASE_AUTH_PROJECT_ID        || 'relay-15824',
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID   || '444335957190',
-  appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID                 || '1:444335957190:web:92c5b2f5b30a7ce16de3c7',
+// relay-15824 Firebase project config (public client-side values)
+const FIREBASE_CONFIG = {
+  apiKey:            'AIzaSyDA4N-yBgrNvPYXZP3MvbV81slAt3a5hCE',
+  authDomain:        'relay-15824.firebaseapp.com',
+  projectId:         'relay-15824',
+  messagingSenderId: '444335957190',
+  appId:             '1:444335957190:web:92c5b2f5b30a7ce16de3c7',
 }
 
-const APP_NAME = 'relay'
+const APP_NAME = 'switchnow'
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
     if (document.querySelector(`script[src="${src}"]`)) { resolve(); return }
     const s = document.createElement('script')
     s.src = src
+    s.async = true
     s.onload  = () => resolve()
-    s.onerror = () => reject(new Error('Failed to load Firebase scripts'))
+    s.onerror = () => reject(new Error(`Failed to load: ${src}`))
     document.head.appendChild(s)
   })
 }
@@ -26,7 +28,7 @@ async function getFirebaseAuth(): Promise<any> {
   await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js')
   const fb = (window as any).firebase
   const existing = fb.apps?.find((a: any) => a.name === APP_NAME)
-  const app = existing || fb.initializeApp(AUTH_CONFIG, APP_NAME)
+  const app = existing ?? fb.initializeApp(FIREBASE_CONFIG, APP_NAME)
   return fb.auth(app)
 }
 
@@ -37,52 +39,62 @@ function clearVerifier() {
     try { verifier.clear() } catch {}
     verifier = null
   }
+  // Remove old container so it can be recreated fresh
+  const old = document.getElementById('sw-rc-root')
+  if (old) old.remove()
 }
 
-function ensureContainer(): string {
-  const id = 'sw-recaptcha-root'
-  if (!document.getElementById(id)) {
-    const el = document.createElement('div')
-    el.id = id
-    el.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden'
-    document.body.appendChild(el)
-  }
-  return id
+function createContainer(): HTMLElement {
+  const el = document.createElement('div')
+  el.id = 'sw-rc-root'
+  el.style.cssText = 'position:fixed;bottom:0;right:0;width:0;height:0;overflow:hidden;z-index:-1'
+  document.body.appendChild(el)
+  return el
 }
 
 export async function sendPhoneCode(phoneDigits: string): Promise<string> {
   const auth = await getFirebaseAuth()
-
   clearVerifier()
+  const container = createContainer()
 
-  const containerId = ensureContainer()
-  verifier = new (window as any).firebase.auth.RecaptchaVerifier(
-    containerId,
-    { size: 'invisible' },
-    auth.app,
-  )
+  verifier = new (window as any).firebase.auth.RecaptchaVerifier(container, {
+    size: 'invisible',
+    callback: () => {},
+    'expired-callback': () => { clearVerifier() },
+  }, auth.app)
 
   try {
     const result = await auth.signInWithPhoneNumber(`+91${phoneDigits}`, verifier)
-    ;(window as any).__firebaseConfirmation = result
-    return result.verificationId || 'pending'
-  } catch (err) {
+    ;(window as any).__fbConfirm = result
+    return 'sent'
+  } catch (err: any) {
     clearVerifier()
-    throw err
+    // Surface a human-readable message
+    const msg: Record<string, string> = {
+      'auth/billing-not-enabled':  'Firebase billing not enabled. Enable reCAPTCHA Enterprise API in Google Cloud Console.',
+      'auth/invalid-phone-number': 'Invalid phone number.',
+      'auth/too-many-requests':    'Too many attempts. Please wait and try again.',
+      'auth/captcha-check-failed': 'reCAPTCHA check failed. Reload and try again.',
+    }
+    throw new Error(msg[err?.code] ?? err?.message ?? 'Failed to send OTP')
   }
 }
 
 export async function confirmPhoneCode(code: string): Promise<{ idToken: string; phone: string }> {
-  const result = (window as any).__firebaseConfirmation
-  if (!result) throw new Error('No pending verification. Tap Send OTP first.')
-  const credential = await result.confirm(code)
-  const idToken: string = await credential.user.getIdToken()
-  const phone: string   = credential.user.phoneNumber || ''
-  ;(window as any).__firebaseConfirmation = null
-  clearVerifier()
-  return { idToken, phone }
-}
-
-export function isFirebaseAuthEnabled(): boolean {
-  return !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
+  const result = (window as any).__fbConfirm
+  if (!result) throw new Error('Session expired. Please tap Send OTP again.')
+  try {
+    const credential = await result.confirm(code)
+    const idToken: string = await credential.user.getIdToken()
+    const phone: string   = (credential.user.phoneNumber || '').replace(/^\+91/, '')
+    ;(window as any).__fbConfirm = null
+    clearVerifier()
+    return { idToken, phone }
+  } catch (err: any) {
+    const msg: Record<string, string> = {
+      'auth/invalid-verification-code': 'Wrong OTP. Please check and try again.',
+      'auth/code-expired':              'OTP expired. Please request a new one.',
+    }
+    throw new Error(msg[err?.code] ?? err?.message ?? 'OTP verification failed')
+  }
 }
