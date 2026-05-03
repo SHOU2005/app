@@ -6,7 +6,7 @@ import CaptainBottomNav from '@/components/captain/CaptainBottomNav'
 
 const T1   = '#111111'
 const T2   = 'rgba(0,0,0,0.5)'
-const BLUE = '#2563EB'
+const BLUE = '#111111'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
 type CommissionStatus = 'PENDING' | 'APPROVED' | 'PAID'
@@ -16,8 +16,8 @@ interface Commission {
 }
 
 const STATUS_COLORS: Record<CommissionStatus, { bg: string; text: string }> = {
-  PENDING:  { bg: '#FEF9C3', text: '#713F12' },
-  APPROVED: { bg: '#DCFCE7', text: '#166534' },
+  PENDING:  { bg: '#F5F5F5', text: '#111111' },
+  APPROVED: { bg: '#F5F5F5', text: '#111111' },
   PAID:     { bg: '#F0FDF4', text: '#15803D' },
 }
 

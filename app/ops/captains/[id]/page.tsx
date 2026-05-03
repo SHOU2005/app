@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import OpsNav from '@/components/ops/OpsNav'
 
-const BG='#080808';const S1='#111111';const S2='#181818';const BD='rgba(255,255,255,0.07)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.45)';const ACC='#6366F1';const FONT='"DM Sans", system-ui, sans-serif'
+const BG='#000000';const S1='#0F0F0F';const S2='#141414';const BD='rgba(255,255,255,0.08)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.4)';
 
 export default function CaptainDetailPage() {
   const router = useRouter(); const { id } = useParams<{ id: string }>()
@@ -62,7 +62,7 @@ export default function CaptainDetailPage() {
           <input style={{ width: '100%', background: S2, border: `1px solid ${BD}`, borderRadius: 10, padding: '10px 14px', color: T1, fontSize: 14, outline: 'none', marginBottom: 10, boxSizing: 'border-box' }} placeholder="Task title *" value={task.title} onChange={e => setTask(p => ({ ...p, title: e.target.value }))} />
           <input style={{ width: '100%', background: S2, border: `1px solid ${BD}`, borderRadius: 10, padding: '10px 14px', color: T1, fontSize: 14, outline: 'none', marginBottom: 10, boxSizing: 'border-box' }} placeholder="Description (optional)" value={task.description} onChange={e => setTask(p => ({ ...p, description: e.target.value }))} />
           <input style={{ width: '100%', background: S2, border: `1px solid ${BD}`, borderRadius: 10, padding: '10px 14px', color: T1, fontSize: 14, outline: 'none', marginBottom: 12, boxSizing: 'border-box' }} type="date" value={task.dueDate} onChange={e => setTask(p => ({ ...p, dueDate: e.target.value }))} />
-          <button onClick={assignTask} disabled={saving || !task.title} style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: ACC, color: T1, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>{saving ? 'Assigning…' : 'Assign Task'}</button>
+          <button onClick={assignTask} disabled={saving || !task.title} style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: T1, color: '#000000', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>{saving ? 'Assigning…' : 'Assign Task'}</button>
         </div>
 
         {/* Tasks list */}

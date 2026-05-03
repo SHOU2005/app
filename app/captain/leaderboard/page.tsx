@@ -6,8 +6,8 @@ import CaptainBottomNav from '@/components/captain/CaptainBottomNav'
 
 const T1   = '#111111'
 const T2   = 'rgba(0,0,0,0.5)'
-const BLUE = '#2563EB'
-const GOLD = '#D97706'
+const BLUE = '#111111'
+const GOLD = '#111111'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
 interface Leader { rank: number; name: string; territory: string | null; totalEarnings: number; earnedThisMonth: number; isMe: boolean }

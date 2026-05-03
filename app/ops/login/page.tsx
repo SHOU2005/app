@@ -2,12 +2,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const BG   = '#080808'
-const S1   = '#111111'
+const BG   = '#000000'
+const S1   = '#0F0F0F'
 const T1   = '#FFFFFF'
-const T2   = 'rgba(255,255,255,0.45)'
-const BD   = 'rgba(255,255,255,0.07)'
-const ACC  = '#6366F1'
+const T2   = 'rgba(255,255,255,0.4)'
+const BD   = 'rgba(255,255,255,0.08)'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
 const useFirebase = !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY
@@ -74,7 +73,7 @@ export default function OpsLoginPage() {
       <div id="firebase-recaptcha" />
       <div style={{ background: S1, border: `1px solid ${BD}`, borderRadius: 24, padding: '32px 28px', width: '100%', maxWidth: 400 }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 16, background: ACC, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontSize: 24 }}>⚡</div>
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontSize: 24 }}>⚡</div>
           <h1 style={{ color: T1, fontWeight: 800, fontSize: 22, margin: 0 }}>Ops Portal</h1>
           <p style={{ color: T2, fontSize: 14, margin: '6px 0 0' }}>Internal operations team login</p>
         </div>
@@ -90,7 +89,7 @@ export default function OpsLoginPage() {
             />
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
             <button onClick={sendOTP} disabled={loading || phone.length !== 10}
-              style={{ width: '100%', marginTop: 16, padding: '14px', borderRadius: 12, background: ACC, color: T1, fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer', opacity: phone.length !== 10 ? 0.5 : 1 }}>
+              style={{ width: '100%', marginTop: 16, padding: '14px', borderRadius: 12, background: T1, color: '#000000', fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer', opacity: phone.length !== 10 ? 0.4 : 1 }}>
               {loading ? 'Sending…' : 'Send OTP'}
             </button>
           </>
@@ -106,7 +105,7 @@ export default function OpsLoginPage() {
             />
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
             <button onClick={verifyOTP} disabled={loading || otp.length < 4}
-              style={{ width: '100%', marginTop: 16, padding: '14px', borderRadius: 12, background: ACC, color: T1, fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer', opacity: otp.length < 4 ? 0.5 : 1 }}>
+              style={{ width: '100%', marginTop: 16, padding: '14px', borderRadius: 12, background: T1, color: '#000000', fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer', opacity: otp.length < 4 ? 0.4 : 1 }}>
               {loading ? 'Verifying…' : 'Login'}
             </button>
             <button onClick={() => { setPhase('phone'); setOtp(''); setError('') }}

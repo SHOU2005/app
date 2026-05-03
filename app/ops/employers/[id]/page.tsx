@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import OpsNav from '@/components/ops/OpsNav'
 
-const BG='#080808';const S1='#111111';const BD='rgba(255,255,255,0.07)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.45)';const ACC='#6366F1';const FONT='"DM Sans", system-ui, sans-serif'
+const BG='#000000';const S1='#0F0F0F';const BD='rgba(255,255,255,0.08)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.4)';
 
 const SHIFT_COLOR: Record<string, string> = { OPEN: '#34D399', CLOSED: '#F87171', IN_PROGRESS: '#60A5FA', COMPLETED: '#FBBF24' }
 
@@ -73,7 +73,7 @@ export default function EmployerDetailPage() {
       <div style={{ padding: '20px', marginLeft: 0, maxWidth: 700 }} className="ops-content">
 
         {/* Back */}
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: ACC, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 16, paddingTop: 'env(safe-area-inset-top,0px)' }}>← Back</button>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: T1, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 16, paddingTop: 'env(safe-area-inset-top,0px)' }}>← Back</button>
 
         {/* Header card */}
         <div style={{ background: S1, border: `1px solid ${BD}`, borderRadius: 16, padding: '20px', marginBottom: 16 }}>
@@ -107,7 +107,7 @@ export default function EmployerDetailPage() {
           {employer.address && <p style={{ color: T2, fontSize: 13, margin: '0 0 6px' }}>📍 {employer.address}</p>}
           {employer.gstNumber && <p style={{ color: T2, fontSize: 13, margin: '0 0 6px' }}>GST: {employer.gstNumber}</p>}
           {employer.captainReferralId && (
-            <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, fontWeight: 600, background: '#A78BFA20', color: '#A78BFA', display: 'inline-block', marginBottom: 12 }}>Captain Referred</span>
+            <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, fontWeight: 600, background: '#2563EB20', color: '#2563EB', display: 'inline-block', marginBottom: 12 }}>Captain Referred</span>
           )}
           {employer.verifiedByOpsAt && <p style={{ color: T2, fontSize: 12, margin: '0 0 12px' }}>Verified on {new Date(employer.verifiedByOpsAt).toLocaleDateString('en-IN')}</p>}
 

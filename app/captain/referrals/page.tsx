@@ -6,7 +6,7 @@ import TopBar from '@/components/shared/TopBar'
 
 const T1   = '#111111'
 const T2   = 'rgba(0,0,0,0.5)'
-const BLUE = '#2563EB'
+const BLUE = '#111111'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
 interface Employer { id: string; name: string; phone: string; employerProfile: { companyName: string | null; verifiedByOpsAt: string | null; totalShifts: number } | null }
@@ -31,7 +31,7 @@ export default function ReferralsPage() {
   }, [router])
 
   const statusColor = (s: string) =>
-    s === 'APPROVED' ? '#059669' : s === 'REJECTED' ? '#DC2626' : '#D97706'
+    s === 'APPROVED' ? '#111111' : s === 'REJECTED' ? '#111111' : '#111111'
 
   return (
     <div style={{ fontFamily: FONT, background: '#FFFFFF', minHeight: '100vh', paddingTop: 'calc(64px + env(safe-area-inset-top,0px))', paddingBottom: 'calc(88px + env(safe-area-inset-bottom,0px))' }}>
@@ -60,7 +60,7 @@ export default function ReferralsPage() {
                     <p style={{ color: T2, margin: '2px 0', fontSize: 13 }}>{e.employerProfile?.companyName || '—'} · {e.phone}</p>
                     <p style={{ color: T2, margin: 0, fontSize: 12 }}>{e.employerProfile?.totalShifts ?? 0} shifts posted</p>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: e.employerProfile?.verifiedByOpsAt ? '#DCFCE7' : '#FEF9C3', color: e.employerProfile?.verifiedByOpsAt ? '#166534' : '#713F12' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: e.employerProfile?.verifiedByOpsAt ? '#F5F5F5' : '#F5F5F5', color: e.employerProfile?.verifiedByOpsAt ? '#111111' : '#111111' }}>
                     {e.employerProfile?.verifiedByOpsAt ? 'Verified' : 'Pending'}
                   </span>
                 </div>
@@ -77,7 +77,7 @@ export default function ReferralsPage() {
                     <p style={{ color: T2, margin: '2px 0', fontSize: 13 }}>{w.phone} · {w.workerProfile?.city || '—'}</p>
                     <p style={{ color: T2, margin: 0, fontSize: 12 }}>{w.workerProfile?.totalShifts ?? 0} shifts done</p>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: '#F0F9FF', color: statusColor(w.workerProfile?.kycStatus || '') }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: '#F7F7F7', color: statusColor(w.workerProfile?.kycStatus || '') }}>
                     {w.workerProfile?.kycStatus || 'PENDING'}
                   </span>
                 </div>

@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import OpsNav from '@/components/ops/OpsNav'
 import { Suspense } from 'react'
 
-const BG='#080808';const S1='#111111';const BD='rgba(255,255,255,0.07)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.45)';const ACC='#6366F1';const FONT='"DM Sans", system-ui, sans-serif'
+const BG='#000000';const S1='#0F0F0F';const BD='rgba(255,255,255,0.08)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.4)';const FONT='"DM Sans", system-ui, sans-serif'
 
 interface Worker { id: string; kycStatus: string; city: string | null; totalShifts: number; user: { name: string; phone: string; isActive: boolean } }
 
@@ -37,7 +37,7 @@ function WorkersList() {
         <p style={{ color: T1, fontWeight: 800, fontSize: 22, margin: '0 0 16px', paddingTop: 'env(safe-area-inset-top,0px)' }}>Workers</p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map(f => (
-            <button key={f} onClick={() => setKycFilter(f)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', background: kycFilter === f ? ACC : S1, color: kycFilter === f ? T1 : T2 }}>{f}</button>
+            <button key={f} onClick={() => setKycFilter(f)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1px solid ${BD}`, cursor: 'pointer', background: kycFilter === f ? T1 : 'transparent', color: kycFilter === f ? '#000' : T2 }}>{f}</button>
           ))}
         </div>
         {loading ? <div style={{ color: T2, textAlign: 'center', paddingTop: 40 }}>Loading…</div> :

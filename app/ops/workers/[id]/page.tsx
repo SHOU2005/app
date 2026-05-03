@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import OpsNav from '@/components/ops/OpsNav'
 
-const BG='#080808';const S1='#111111';const BD='rgba(255,255,255,0.07)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.45)';const ACC='#6366F1';const FONT='"DM Sans", system-ui, sans-serif'
+const BG='#000000';const S1='#0F0F0F';const BD='rgba(255,255,255,0.08)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.4)';
 
 const KYC_COLOR: Record<string, string> = { PENDING: '#FBBF24', APPROVED: '#34D399', REJECTED: '#F87171' }
 const STATUS_COLOR: Record<string, string> = { COMPLETED: '#34D399', PENDING: '#FBBF24', CANCELLED: '#F87171', IN_PROGRESS: '#60A5FA' }
@@ -70,7 +70,7 @@ export default function WorkerDetailPage() {
       <div style={{ padding: '20px', marginLeft: 0, maxWidth: 700 }} className="ops-content">
 
         {/* Back */}
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: ACC, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 16, paddingTop: 'env(safe-area-inset-top,0px)' }}>← Back</button>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: T1, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 16, paddingTop: 'env(safe-area-inset-top,0px)' }}>← Back</button>
 
         {/* Header */}
         <div style={{ background: S1, border: `1px solid ${BD}`, borderRadius: 16, padding: '20px', marginBottom: 16 }}>
@@ -100,7 +100,7 @@ export default function WorkerDetailPage() {
           {worker.skills.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
               {worker.skills.map(s => (
-                <span key={s} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, background: `${ACC}20`, color: ACC, fontWeight: 600 }}>{s}</span>
+                <span key={s} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.08)', color: T2, fontWeight: 600 }}>{s}</span>
               ))}
             </div>
           )}
@@ -114,7 +114,7 @@ export default function WorkerDetailPage() {
               Video {worker.videoVerified ? '✓' : '✗'}
             </span>
             {worker.captainReferralId && (
-              <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, fontWeight: 600, background: '#A78BFA20', color: '#A78BFA' }}>Captain Referred</span>
+              <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, fontWeight: 600, background: '#2563EB20', color: '#2563EB' }}>Captain Referred</span>
             )}
           </div>
 

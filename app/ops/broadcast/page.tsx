@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import OpsNav from '@/components/ops/OpsNav'
 
-const BG='#080808';const S1='#111111';const BD='rgba(255,255,255,0.07)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.45)';const ACC='#6366F1';const FONT='"DM Sans", system-ui, sans-serif'
+const BG='#000000';const S1='#0F0F0F';const BD='rgba(255,255,255,0.08)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.4)';
 
 export default function BroadcastPage() {
   const router = useRouter()
@@ -38,7 +38,7 @@ export default function BroadcastPage() {
           <label style={{ color: T2, fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>Target Audience</label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {['ALL', 'WORKER', 'EMPLOYER', 'CAPTAIN'].map(r => (
-              <button key={r} onClick={() => setTargetRole(r)} style={{ padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: targetRole === r ? ACC : S1, color: targetRole === r ? T1 : T2 }}>{r}</button>
+              <button key={r} onClick={() => setTargetRole(r)} style={{ padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: targetRole === r ? T1 : 'transparent', color: targetRole === r ? '#000' : T2 }}>{r}</button>
             ))}
           </div>
         </div>
@@ -75,7 +75,7 @@ export default function BroadcastPage() {
           </div>
         )}
 
-        <button onClick={send} disabled={sending || !title || !body} style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: !title || !body ? '#333' : ACC, color: T1, fontWeight: 800, fontSize: 15, cursor: !title || !body ? 'not-allowed' : 'pointer' }}>
+        <button onClick={send} disabled={sending || !title || !body} style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: !title || !body ? 'rgba(255,255,255,0.1)' : T1, color: !title || !body ? T2 : '#000000', fontWeight: 800, fontSize: 15, cursor: !title || !body ? 'not-allowed' : 'pointer' }}>
           {sending ? 'Sending…' : `Send to ${targetRole === 'ALL' ? 'All Users' : targetRole + 's'}`}
         </button>
       </div>

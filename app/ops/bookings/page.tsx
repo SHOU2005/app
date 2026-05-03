@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import OpsNav from '@/components/ops/OpsNav'
 
-const BG='#080808';const S1='#111111';const BD='rgba(255,255,255,0.07)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.45)';const ACC='#6366F1';const FONT='"DM Sans", system-ui, sans-serif'
+const BG='#000000';const S1='#0F0F0F';const BD='rgba(255,255,255,0.08)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.4)';
 
 interface Booking { id: string; status: string; totalAmount: number; platformFee: number; createdAt: string; shift: { title: string; date: string; city: string }; worker: { user: { name: string } }; employer: { name: string } }
 
-const STATUS_COLORS: Record<string, string> = { PENDING: '#FBBF24', CONFIRMED: '#60A5FA', IN_PROGRESS: '#818CF8', COMPLETED: '#34D399', CANCELLED: '#F87171', NO_SHOW: '#9CA3AF' }
+const STATUS_COLORS: Record<string, string> = { PENDING: '#FBBF24', CONFIRMED: '#60A5FA', IN_PROGRESS: '#FFFFFF', COMPLETED: '#34D399', CANCELLED: '#F87171', NO_SHOW: '#9CA3AF' }
 
 export default function BookingsPage() {
   const router = useRouter()
@@ -34,7 +34,7 @@ export default function BookingsPage() {
         <p style={{ color: T1, fontWeight: 800, fontSize: 22, margin: '0 0 16px', paddingTop: 'env(safe-area-inset-top,0px)' }}>Bookings</p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
           {['ALL', 'PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].map(f => (
-            <button key={f} onClick={() => { setLoading(true); setFilter(f) }} style={{ padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', background: filter === f ? ACC : S1, color: filter === f ? T1 : T2, whiteSpace: 'nowrap', flexShrink: 0 }}>{f}</button>
+            <button key={f} onClick={() => { setLoading(true); setFilter(f) }} style={{ padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1px solid ${BD}`, cursor: 'pointer', background: filter === f ? T1 : 'transparent', color: filter === f ? '#000' : T2, whiteSpace: 'nowrap', flexShrink: 0 }}>{f}</button>
           ))}
         </div>
         {loading ? <div style={{ color: T2, textAlign: 'center', paddingTop: 40 }}>Loading…</div> :

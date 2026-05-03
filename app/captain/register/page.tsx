@@ -6,7 +6,7 @@ import { Suspense } from 'react'
 const BG   = '#FFFFFF'
 const T1   = '#111111'
 const T2   = 'rgba(0,0,0,0.5)'
-const BLUE = '#2563EB'
+const BLUE = '#111111'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
 function RegisterForm() {

@@ -261,6 +261,7 @@ model OtpLog {
 model CaptainProfile {
   id             String   @id @default(cuid())
   userId         String   @unique
+  referralCode   String?  @unique
   territory      String?
   status         String   @default("PENDING")
   totalEarnings  Float    @default(0)

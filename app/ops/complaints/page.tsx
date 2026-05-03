@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import OpsNav from '@/components/ops/OpsNav'
 
-const BG='#080808';const S1='#111111';const BD='rgba(255,255,255,0.07)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.45)';const ACC='#6366F1';const FONT='"DM Sans", system-ui, sans-serif'
+const BG='#000000';const S1='#0F0F0F';const BD='rgba(255,255,255,0.08)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.4)';
 
 interface Complaint { id: string; type: string; status: string; description: string; reportedBy: string; against: string; createdAt: string; resolution: string | null }
 
@@ -50,7 +50,7 @@ export default function ComplaintsPage() {
                   </div>
                 </>
               ) : (
-                <button onClick={() => setResolving(c.id)} style={{ width: '100%', padding: '10px', borderRadius: 10, border: `1px solid ${ACC}`, background: 'transparent', color: ACC, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                <button onClick={() => setResolving(c.id)} style={{ width: '100%', padding: '10px', borderRadius: 10, border: `1px solid ${BD}`, background: 'transparent', color: T1, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
                   Resolve Complaint
                 </button>
               )}

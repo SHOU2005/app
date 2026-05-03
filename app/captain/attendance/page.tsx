@@ -6,7 +6,7 @@ import CaptainBottomNav from '@/components/captain/CaptainBottomNav'
 
 const T1   = '#111111'
 const T2   = 'rgba(0,0,0,0.5)'
-const BLUE = '#2563EB'
+const BLUE = '#111111'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
 interface AttendanceRecord { id: string; date: string; checkInTime: string | null; checkOutTime: string | null }
@@ -67,7 +67,7 @@ export default function AttendancePage() {
       <div style={{ padding: '20px' }}>
 
         {/* Today card */}
-        <div style={{ background: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: 20, padding: '24px', marginBottom: 24, textAlign: 'center' }}>
+        <div style={{ background: '#F7F7F7', border: '1px solid #BAE6FD', borderRadius: 20, padding: '24px', marginBottom: 24, textAlign: 'center' }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: T2, marginBottom: 4 }}>{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
           <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: 24 }}>
             <div>
@@ -87,11 +87,11 @@ export default function AttendancePage() {
                 {busy ? '📍 Getting location…' : '📍 Check In'}
               </button>
             ) : !today?.checkOutTime ? (
-              <button onClick={checkOut} disabled={busy} style={{ padding: '14px 40px', borderRadius: 14, background: '#059669', color: '#fff', fontWeight: 800, fontSize: 16, border: 'none', cursor: 'pointer', width: '100%' }}>
+              <button onClick={checkOut} disabled={busy} style={{ padding: '14px 40px', borderRadius: 14, background: '#111111', color: '#fff', fontWeight: 800, fontSize: 16, border: 'none', cursor: 'pointer', width: '100%' }}>
                 {busy ? '📍 Getting location…' : '✅ Check Out'}
               </button>
             ) : (
-              <p style={{ color: '#059669', fontWeight: 700, fontSize: 15, margin: 0 }}>✓ Day complete</p>
+              <p style={{ color: '#111111', fontWeight: 700, fontSize: 15, margin: 0 }}>✓ Day complete</p>
             )
           )}
         </div>
@@ -103,7 +103,7 @@ export default function AttendancePage() {
             <p style={{ color: T1, fontWeight: 600, fontSize: 14, margin: 0 }}>{new Date(r.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
             <div style={{ textAlign: 'right' }}>
               <p style={{ color: T2, fontSize: 13, margin: 0 }}>{fmt(r.checkInTime)} – {fmt(r.checkOutTime)}</p>
-              {!r.checkInTime && <p style={{ color: '#DC2626', fontSize: 12, margin: 0, fontWeight: 600 }}>Absent</p>}
+              {!r.checkInTime && <p style={{ color: '#111111', fontSize: 12, margin: 0, fontWeight: 600 }}>Absent</p>}
             </div>
           </div>
         ))}

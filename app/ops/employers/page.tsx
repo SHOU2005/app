@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import OpsNav from '@/components/ops/OpsNav'
 
-const BG='#080808';const S1='#111111';const BD='rgba(255,255,255,0.07)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.45)';const ACC='#6366F1';const FONT='"DM Sans", system-ui, sans-serif'
+const BG='#000000';const S1='#0F0F0F';const BD='rgba(255,255,255,0.08)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.4)';
 
 interface Employer { id: string; companyName: string | null; businessType: string | null; city: string | null; totalShifts: number; verifiedByOpsAt: string | null; user: { name: string; phone: string; isActive: boolean } }
 
@@ -31,7 +31,7 @@ export default function EmployersPage() {
         <p style={{ color: T1, fontWeight: 800, fontSize: 22, margin: '0 0 16px', paddingTop: 'env(safe-area-inset-top,0px)' }}>Employers</p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           {['ALL', 'UNVERIFIED', 'VERIFIED'].map(f => (
-            <button key={f} onClick={() => { setLoading(true); setFilter(f) }} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', background: filter === f ? ACC : S1, color: filter === f ? T1 : T2 }}>{f}</button>
+            <button key={f} onClick={() => { setLoading(true); setFilter(f) }} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1px solid ${BD}`, cursor: 'pointer', background: filter === f ? T1 : 'transparent', color: filter === f ? '#000' : T2 }}>{f}</button>
           ))}
         </div>
         {loading ? <div style={{ color: T2, textAlign: 'center', paddingTop: 40 }}>Loading…</div> :

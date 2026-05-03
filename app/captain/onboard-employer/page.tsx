@@ -6,7 +6,7 @@ import CaptainBottomNav from '@/components/captain/CaptainBottomNav'
 
 const T1   = '#111111'
 const T2   = 'rgba(0,0,0,0.5)'
-const BLUE = '#2563EB'
+const BLUE = '#111111'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
 const BUSINESS_TYPES = ['Restaurant', 'Hotel', 'Retail', 'Warehouse', 'Hospital', 'Office', 'Manufacturing', 'Other']
@@ -107,7 +107,7 @@ export default function OnboardEmployerPage() {
             <p style={{ fontSize: 22, fontWeight: 800, color: T1, marginBottom: 8 }}>Employer Registered!</p>
             <p style={{ color: T2, fontSize: 15, marginBottom: 8 }}><strong>{name}</strong> from <strong>{companyName || 'their business'}</strong> has been registered.</p>
             <p style={{ color: T2, fontSize: 14, marginBottom: 32 }}>An OTP has been sent to their number so they can set up their account.</p>
-            <p style={{ color: '#059669', fontSize: 14, fontWeight: 600 }}>You will earn ₹100 commission on every booking they make.</p>
+            <p style={{ color: '#111111', fontSize: 14, fontWeight: 600 }}>You will earn ₹100 commission on every booking they make.</p>
             <button className="btn btn-primary btn-lg btn-full" style={{ marginTop: 32, background: BLUE, borderRadius: 14 }} onClick={() => router.push('/captain')}>
               Back to Home
             </button>

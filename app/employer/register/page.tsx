@@ -56,6 +56,7 @@ function RegisterInner() {
   const [bizType, setBizType]     = useState('')
   const [address, setAddress]     = useState('')
   const [gst, setGst]             = useState('')
+  const [referralCode, setReferralCode] = useState(searchParams.get('ref') || '')
   const [otpSent, setOtpSent]     = useState(false)
   const [otp, setOtp]             = useState(['', '', '', ''])
   const otpRefs = [
@@ -103,7 +104,7 @@ function RegisterInner() {
         const { idToken } = await confirmPhoneCode(code)
         const res = await fetch('/api/auth/firebase-verify', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken, role: 'EMPLOYER' }),
+          body: JSON.stringify({ idToken, role: 'EMPLOYER', referralCode: referralCode || undefined }),
         })
         const data = await res.json()
         if (!res.ok) { setError(data.error || 'Invalid OTP'); return }
@@ -111,7 +112,7 @@ function RegisterInner() {
       } else {
         const vRes = await fetch('/api/auth/verify-otp', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, otp: code, role: 'EMPLOYER' }),
+          body: JSON.stringify({ phone, otp: code, role: 'EMPLOYER', referralCode: referralCode || undefined }),
         })
         const vData = await vRes.json()
         if (!vRes.ok) { setError(vData.error || 'Invalid OTP'); return }
@@ -225,6 +226,7 @@ function RegisterInner() {
                 <Field label="Business Name" value={bizName} onChange={setBizName} placeholder="e.g. Sharma Stores" />
                 <Field label="Owner Name" value={ownerName} onChange={setOwnerName} placeholder="e.g. Rajesh Sharma" />
                 <Field label="City" value={city} onChange={setCity} placeholder="e.g. Mumbai" />
+                <Field label="Captain Referral Code (optional)" value={referralCode} onChange={v => setReferralCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))} placeholder="e.g. SW4X7RKM" hint="Enter if referred by a Switch Captain" />
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', marginBottom: 8, textTransform: 'uppercase' as const, letterSpacing: 0.5 }}>
                     Phone Number

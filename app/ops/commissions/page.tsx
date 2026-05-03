@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import OpsNav from '@/components/ops/OpsNav'
 
-const BG='#080808';const S1='#111111';const BD='rgba(255,255,255,0.07)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.45)';const ACC='#6366F1';const FONT='"DM Sans", system-ui, sans-serif'
+const BG='#000000';const S1='#0F0F0F';const BD='rgba(255,255,255,0.08)';const T1='#FFFFFF';const T2='rgba(255,255,255,0.4)';
 
 interface Commission { id: string; amount: number; status: string; createdAt: string; captain: { user: { name: string; phone: string } }; booking: { shift: { title: string; date: string } } }
 
@@ -38,7 +38,7 @@ export default function CommissionsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingTop: 'env(safe-area-inset-top,0px)' }}>
           <p style={{ color: T1, fontWeight: 800, fontSize: 22, margin: 0 }}>Commissions</p>
           {selected.size > 0 && (
-            <button onClick={approve} disabled={approving} style={{ padding: '8px 18px', borderRadius: 10, border: 'none', background: ACC, color: T1, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+            <button onClick={approve} disabled={approving} style={{ padding: '8px 18px', borderRadius: 10, border: 'none', background: T1, color: '#000000', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
               {approving ? 'Approving…' : `Approve ${selected.size}`}
             </button>
           )}
@@ -52,7 +52,7 @@ export default function CommissionsPage() {
         {loading ? <div style={{ color: T2, textAlign: 'center', paddingTop: 40 }}>Loading…</div> :
           commissions.length === 0 ? <p style={{ color: T2, textAlign: 'center', paddingTop: 40 }}>No pending commissions</p> :
           commissions.map(c => (
-            <div key={c.id} onClick={() => toggle(c.id)} style={{ background: selected.has(c.id) ? `${ACC}20` : S1, border: `1px solid ${selected.has(c.id) ? ACC : BD}`, borderRadius: 14, padding: '14px 16px', marginBottom: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div key={c.id} onClick={() => toggle(c.id)} style={{ background: selected.has(c.id) ? 'rgba(255,255,255,0.06)' : S1, border: `1px solid ${selected.has(c.id) ? 'rgba(255,255,255,0.3)' : BD}`, borderRadius: 14, padding: '14px 16px', marginBottom: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
               <input type="checkbox" checked={selected.has(c.id)} readOnly style={{ width: 16, height: 16, cursor: 'pointer', flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <p style={{ color: T1, fontWeight: 700, fontSize: 15, margin: 0 }}>{c.captain?.user?.name}</p>

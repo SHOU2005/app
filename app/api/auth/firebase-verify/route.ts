@@ -71,7 +71,7 @@ async function verifyFirebaseIdToken(idToken: string): Promise<{ phone: string }
 
 export async function POST(req: NextRequest) {
   try {
-    const { idToken, role } = await req.json()
+    const { idToken, role, referralCode } = await req.json()
 
     if (!idToken) {
       return NextResponse.json({ error: 'idToken required' }, { status: 400 })
@@ -88,6 +88,13 @@ export async function POST(req: NextRequest) {
     }
 
     const ADMIN_PHONE = '9205617375'
+
+    // Resolve referral code → captainProfileId
+    let captainRefId: string | undefined
+    if (referralCode) {
+      const cap = await prisma.captainProfile.findUnique({ where: { referralCode: String(referralCode).toUpperCase().trim() } })
+      if (cap) captainRefId = cap.id
+    }
 
     let user = await prisma.user.findUnique({ where: { phone } })
 
@@ -109,12 +116,12 @@ export async function POST(req: NextRequest) {
       } else {
         const userRole = (role === 'EMPLOYER' ? 'EMPLOYER' : 'WORKER') as 'EMPLOYER' | 'WORKER'
         user = await prisma.user.create({
-          data: { phone, name: `User ${phone.slice(-4)}`, role: userRole, password: '' },
+          data: { phone, name: `User ${phone.slice(-4)}`, role: userRole, password: '', ...(captainRefId && { captainReferralId: captainRefId }) },
         })
         if (userRole === 'WORKER') {
-          await prisma.workerProfile.create({ data: { userId: user.id } })
+          await prisma.workerProfile.create({ data: { userId: user.id, ...(captainRefId && { captainReferralId: captainRefId }) } })
         } else {
-          await prisma.employerProfile.create({ data: { userId: user.id } })
+          await prisma.employerProfile.create({ data: { userId: user.id, ...(captainRefId && { captainReferralId: captainRefId }) } })
         }
       }
     }

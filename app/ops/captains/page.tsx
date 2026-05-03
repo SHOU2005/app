@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import OpsNav from '@/components/ops/OpsNav'
 
-const BG   = '#080808'; const S1 = '#111111'; const S2 = '#181818'
-const BD   = 'rgba(255,255,255,0.07)'; const T1 = '#FFFFFF'; const T2 = 'rgba(255,255,255,0.45)'
-const ACC  = '#6366F1'; const FONT = '"DM Sans", system-ui, sans-serif'
+const BG   = '#000000'; const S1 = '#0F0F0F'; const S2 = '#141414'
+const BD   = 'rgba(255,255,255,0.08)'; const T1 = '#FFFFFF'; const T2 = 'rgba(255,255,255,0.4)'
+
 
 interface Captain { id: string; name: string; phone: string; territory: string | null; status: string; totalEarnings: number; pendingPayout: number; pendingCommissions: number; openTasks: number }
 
@@ -36,7 +36,7 @@ export default function OpsCapt() {
         <p style={{ color: T1, fontWeight: 800, fontSize: 22, margin: '0 0 16px', paddingTop: 'env(safe-area-inset-top,0px)' }}>Captains</p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           {['ALL', 'PENDING', 'ACTIVE', 'SUSPENDED'].map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', background: filter === f ? ACC : S2, color: filter === f ? T1 : T2 }}>{f}</button>
+            <button key={f} onClick={() => setFilter(f)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1px solid ${BD}`, cursor: 'pointer', background: filter === f ? T1 : 'transparent', color: filter === f ? '#000' : T2 }}>{f}</button>
           ))}
         </div>
         {loading ? <div style={{ color: T2, textAlign: 'center', paddingTop: 40 }}>Loading…</div> :

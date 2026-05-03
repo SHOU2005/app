@@ -119,6 +119,8 @@ function RegisterPageInner() {
   const [aadharFront, setAadharFront] = useState<string|null>(null)
   const [aadharBack,  setAadharBack]  = useState<string|null>(null)
 
+  const [referralCode, setReferralCode] = useState(() => searchParams?.get('ref') ?? '')
+
   const [loading,   setLoading]   = useState(false)
   const [otpPhase,  setOtpPhase]  = useState<'info'|'otp'>('info')
   const [otp,       setOtp]       = useState(['','','',''])
@@ -159,14 +161,14 @@ function RegisterPageInner() {
         const { idToken } = await confirmPhoneCode(code)
         const res = await fetch('/api/auth/firebase-verify', {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ idToken, role:'WORKER' }),
+          body: JSON.stringify({ idToken, role:'WORKER', referralCode: referralCode || undefined }),
         })
         if (res.ok) { localStorage.setItem('sw_role','worker'); go(2) }
         else { const d = await res.json(); setOtpError(d.error||'Invalid OTP'); setOtp(['','','','']); setTimeout(() => otpRefs[0].current?.focus(), 50) }
       } else {
         const res = await fetch('/api/auth/verify-otp', {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ phone, otp: code, role:'WORKER' }),
+          body: JSON.stringify({ phone, otp: code, role:'WORKER', referralCode: referralCode || undefined }),
         })
         const data = await res.json()
         if (res.ok) { localStorage.setItem('sw_role','worker'); go(2) }
@@ -377,6 +379,19 @@ function RegisterPageInner() {
                     style={{ flex:1, height:'100%', background:'transparent', border:'none', outline:'none',
                       paddingLeft:16, paddingRight:16, fontSize:16, fontWeight:600, color:'#111111' }} />
                 </div>
+              </div>
+
+              {/* Optional referral code */}
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: 'rgba(0,0,0,0.4)', marginBottom: 8 }}>
+                  Captain Referral Code <span style={{ fontWeight: 400 }}>(optional)</span>
+                </p>
+                <input value={referralCode} onChange={e => setReferralCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+                  placeholder="e.g. SW4X7RKM"
+                  style={{ width: '100%', height: 50, padding: '0 16px', borderRadius: 14,
+                    background: '#F5F5F5', border: '1.5px solid rgba(0,0,0,0.1)',
+                    fontSize: 16, fontWeight: 700, color: '#111111', outline: 'none',
+                    letterSpacing: 3, fontFamily: '"Courier New", monospace', boxSizing: 'border-box' as const }} />
               </div>
 
               <button onClick={sendOtp} disabled={!step1Valid||loading}
