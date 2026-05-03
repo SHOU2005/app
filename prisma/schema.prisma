@@ -1,0 +1,351 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  EMPLOYER
+  WORKER
+  ADMIN
+  CAPTAIN
+  OPS
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+
+model User {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String   @unique
+  email       String?  @unique
+  password    String
+  role        Role
+  avatar      String?
+  isActive    Boolean  @default(true)
+  fcmToken    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  captainReferralId  String?
+
+  employerProfile    EmployerProfile?
+  workerProfile      WorkerProfile?
+  captainProfile     CaptainProfile?
+  opsProfile         OpsProfile?
+  bookingsAsEmployer Booking[]       @relation("EmployerBookings")
+  ratingsGiven       Rating[]        @relation("RatingsGiven")
+  notifications      Notification[]
+
+  @@index([phone])
+  @@index([role])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  data      Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+model EmployerProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  companyName       String?
+  businessType      String?
+  address           String?
+  city              String?
+  lat               Float?
+  lng               Float?
+  gstNumber         String?
+  totalShifts       Int       @default(0)
+  rating            Float     @default(0)
+  captainReferralId String?
+  verifiedByOpsAt   DateTime?
+
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shifts Shift[]
+}
+
+model WorkerProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  aadhaarNumber     String?
+  aadhaarVerified   Boolean   @default(false)
+  videoVerified     Boolean   @default(false)
+  kycStatus         KycStatus @default(PENDING)
+  skills            String[]
+  city              String?
+  lat               Float?
+  lng               Float?
+  hourlyRate        Float     @default(125)
+  rating            Float     @default(0)
+  totalShifts       Int       @default(0)
+  totalEarnings     Float     @default(0)
+  isAvailable       Boolean   @default(true)
+  bio               String?
+  captainReferralId String?
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings     Booking[]
+  ratings      Rating[]      @relation("WorkerRatings")
+  availability Availability[]
+}
+
+model Availability {
+  id           String   @id @default(cuid())
+  workerProfileId String
+  date         DateTime
+  startTime    String
+  endTime      String
+  isBooked     Boolean  @default(false)
+
+  worker WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([workerProfileId, date])
+}
+
+model Shift {
+  id              String   @id @default(cuid())
+  employerProfileId String
+  title           String
+  role            String
+  description     String?
+  address         String
+  city            String
+  lat             Float
+  lng             Float
+  date            DateTime
+  startTime       String
+  endTime         String
+  duration        Int
+  workersNeeded   Int      @default(1)
+  hourlyRate      Float    @default(200)
+  isUrgent        Boolean  @default(false)
+  urgentFee       Float    @default(0)
+  status          String   @default("OPEN")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  employer EmployerProfile @relation(fields: [employerProfileId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([city, date])
+  @@index([lat, lng])
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  shiftId         String
+  workerProfileId String
+  employerId      String
+  status          BookingStatus @default(PENDING)
+  totalAmount     Float
+  platformFee     Float
+  workerEarning   Float
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentId       String?
+  checkInTime     DateTime?
+  checkOutTime    DateTime?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  shift      Shift         @relation(fields: [shiftId], references: [id])
+  worker     WorkerProfile @relation(fields: [workerProfileId], references: [id])
+  employer   User          @relation("EmployerBookings", fields: [employerId], references: [id])
+  payment    Payment?
+  rating     Rating?
+  commission Commission?
+
+  @@index([shiftId])
+  @@index([workerProfileId])
+  @@index([employerId])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  bookingId       String        @unique
+  razorpayOrderId String?
+  razorpayPaymentId String?
+  amount          Float
+  currency        String        @default("INR")
+  status          PaymentStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+}
+
+model Rating {
+  id              String   @id @default(cuid())
+  bookingId       String   @unique
+  workerProfileId String
+  ratedById       String
+  score           Int
+  comment         String?
+  createdAt       DateTime @default(now())
+
+  booking WorkerProfile @relation("WorkerRatings", fields: [workerProfileId], references: [id])
+  ratedBy User          @relation("RatingsGiven", fields: [ratedById], references: [id])
+  bookingRef Booking    @relation(fields: [bookingId], references: [id])
+}
+
+model Complaint {
+  id          String   @id @default(cuid())
+  bookingId   String?
+  reportedBy  String
+  against     String
+  type        String
+  description String
+  status      String   @default("OPEN")
+  resolution  String?
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+}
+
+model OtpLog {
+  id        String   @id @default(cuid())
+  phone     String
+  otp       String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
+
+model CaptainProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  referralCode   String?  @unique
+  territory      String?
+  status         String   @default("PENDING")
+  totalEarnings  Float    @default(0)
+  pendingPayout  Float    @default(0)
+  joinedAt       DateTime @default(now())
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commissions Commission[]
+  tasks       CaptainTask[]
+  attendances CaptainAttendance[]
+
+  @@index([status])
+  @@index([territory])
+}
+
+model Commission {
+  id               String           @id @default(cuid())
+  captainProfileId String
+  bookingId        String           @unique
+  amount           Float            @default(100)
+  status           CommissionStatus @default(PENDING)
+  paidAt           DateTime?
+  createdAt        DateTime         @default(now())
+
+  captain CaptainProfile @relation(fields: [captainProfileId], references: [id], onDelete: Cascade)
+  booking Booking        @relation(fields: [bookingId], references: [id])
+
+  @@index([captainProfileId, status])
+}
+
+model CaptainTask {
+  id               String     @id @default(cuid())
+  captainProfileId String
+  assignedByUserId String
+  title            String
+  description      String?
+  dueDate          DateTime?
+  status           TaskStatus @default(OPEN)
+  completedAt      DateTime?
+  createdAt        DateTime   @default(now())
+
+  captain CaptainProfile @relation(fields: [captainProfileId], references: [id], onDelete: Cascade)
+
+  @@index([captainProfileId, status])
+}
+
+model CaptainAttendance {
+  id               String    @id @default(cuid())
+  captainProfileId String
+  date             DateTime
+  checkInTime      DateTime?
+  checkInLat       Float?
+  checkInLng       Float?
+  checkOutTime     DateTime?
+  checkOutLat      Float?
+  checkOutLng      Float?
+
+  captain CaptainProfile @relation(fields: [captainProfileId], references: [id], onDelete: Cascade)
+
+  @@index([captainProfileId, date])
+}
+
+model OpsProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BroadcastLog {
+  id           String   @id @default(cuid())
+  sentByUserId String
+  title        String
+  body         String
+  targetRole   String
+  targetCity   String?
+  sentCount    Int      @default(0)
+  createdAt    DateTime @default(now())
+}
+
+model PlatformSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
