@@ -1,8 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, ChevronLeft } from 'lucide-react'
-import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
+import { ArrowRight, Eye, EyeOff } from 'lucide-react'
 
 const BG   = '#000000'
 const CARD = '#0E0E0E'
@@ -12,125 +11,31 @@ const T3   = 'rgba(255,255,255,0.15)'
 
 export default function EmployerLoginPage() {
   const router  = useRouter()
-  const [phase,   setPhase]   = useState<'phone' | 'otp'>('phone')
-  const [phone,   setPhone]   = useState('')
-  const [otp,     setOtp]     = useState('')
-  const [error,   setError]   = useState('')
-  const [loading, setLoading] = useState(false)
-  const [resendTimer, setResendTimer] = useState(0)
+  const [phone,    setPhone]    = useState('')
+  const [password, setPassword] = useState('')
+  const [showPass, setShowPass] = useState(false)
+  const [error,    setError]    = useState('')
+  const [loading,  setLoading]  = useState(false)
 
-  const phoneValid = /^\d{10}$/.test(phone)
+  const canSubmit = /^\d{10}$/.test(phone) && password.length >= 1
 
-  function startResendTimer() {
-    let t = 30; setResendTimer(t)
-    const iv = setInterval(() => { t--; setResendTimer(t); if (t <= 0) clearInterval(iv) }, 1000)
-  }
-
-  async function sendOTP() {
-    if (!phoneValid || loading) return
+  async function login() {
+    if (!canSubmit || loading) return
     setLoading(true); setError('')
     try {
-      await sendPhoneCode(phone)
-      setPhase('otp')
-      startResendTimer()
-    } catch (e: any) {
-      setError(e?.message || 'Failed to send OTP. Try again.')
-    } finally { setLoading(false) }
-  }
-
-  async function verifyOTP() {
-    if (otp.length < 6 || loading) return
-    setLoading(true); setError('')
-    try {
-      const { idToken } = await confirmPhoneCode(otp)
-      const res = await fetch('/api/auth/firebase-verify', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, role: 'EMPLOYER' }),
+        body: JSON.stringify({ phone, password }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Invalid OTP'); setOtp(''); return }
-      if (data.role !== 'EMPLOYER') { setError('This is not an employer account'); return }
+      if (!res.ok) { setError(data.error || 'Invalid phone or password'); return }
+      if (data.user?.role !== 'EMPLOYER') { setError('This is not an employer account'); return }
       router.replace('/employer')
-    } catch (e: any) {
-      setError(e?.message || 'Verification failed. Try again.')
-      setOtp('')
+    } catch {
+      setError('Network error. Try again.')
     } finally { setLoading(false) }
   }
 
-  /* ── OTP phase ── */
-  if (phase === 'otp') return (
-    <div style={{ minHeight: '100vh', background: BG, display: 'flex', flexDirection: 'column',
-      paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', color: T1 }}>
-
-      {/* Back */}
-      <div style={{ padding: '16px 20px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={() => { setPhase('phone'); setOtp(''); setError('') }}
-          style={{ width: 40, height: 40, borderRadius: '50%', background: '#1A1A1A',
-            border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', cursor: 'pointer' }}>
-          <ChevronLeft style={{ width: 20, height: 20, color: T2 }} />
-        </button>
-        <span style={{ fontSize: 16, fontWeight: 700, color: T2 }}>+91 {phone}</span>
-      </div>
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px 24px 0' }}>
-
-        <div style={{ width: 64, height: 64, borderRadius: 20, background: '#1A1A1A',
-          border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', marginBottom: 20, fontSize: 28 }}>
-          🔐
-        </div>
-
-        <h1 style={{ fontSize: 28, fontWeight: 900, color: T1, marginBottom: 6 }}>Enter OTP</h1>
-        <p style={{ fontSize: 15, color: T2, marginBottom: 32 }}>
-          6-digit code sent to +91 {phone.slice(0, 5)}XXXXX via SMS
-        </p>
-
-        <input
-          type="tel"
-          inputMode="numeric"
-          maxLength={6}
-          placeholder="• • • • • •"
-          value={otp}
-          autoFocus
-          onChange={e => { setOtp(e.target.value.replace(/\D/g, '')); setError('') }}
-          onKeyDown={e => e.key === 'Enter' && verifyOTP()}
-          style={{
-            width: '100%', height: 72, textAlign: 'center',
-            fontSize: 32, fontWeight: 900, letterSpacing: 14,
-            borderRadius: 18, border: `2px solid ${error ? '#EF4444' : otp ? T1 : 'rgba(255,255,255,0.12)'}`,
-            background: '#111111', color: T1, outline: 'none',
-            transition: 'border-color 0.15s', marginBottom: 16,
-            boxSizing: 'border-box',
-          }}
-        />
-
-        {error && <p style={{ fontSize: 14, color: '#EF4444', fontWeight: 600, textAlign: 'center', marginBottom: 16 }}>{error}</p>}
-
-        <button onClick={verifyOTP} disabled={otp.length < 6 || loading}
-          style={{
-            width: '100%', height: 58, borderRadius: 18, border: 'none',
-            background: otp.length === 6 ? T1 : '#1A1A1A',
-            color: otp.length === 6 ? '#000' : T3,
-            fontSize: 17, fontWeight: 800, cursor: otp.length === 6 ? 'pointer' : 'default',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            transition: 'all 0.2s', marginBottom: 14,
-          }}>
-          {loading
-            ? <><Spinner /><span>Verifying…</span></>
-            : <><span>Verify &amp; Login</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
-        </button>
-
-        <button onClick={resendTimer <= 0 ? () => { setPhase('phone'); setOtp(''); setError('') } : undefined}
-          style={{ textAlign: 'center', fontSize: 14, fontWeight: 600, color: resendTimer <= 0 ? T1 : T3,
-            padding: '10px 0', background: 'none', border: 'none', cursor: resendTimer <= 0 ? 'pointer' : 'default' }}>
-          {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Change number / Resend'}
-        </button>
-      </div>
-    </div>
-  )
-
-  /* ── Phone phase ── */
   return (
     <div style={{ minHeight: '100vh', background: BG, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
@@ -152,14 +57,12 @@ export default function EmployerLoginPage() {
         border: '1px solid rgba(255,255,255,0.07)', padding: '28px 24px' }}>
 
         <p style={{ fontSize: 22, fontWeight: 900, color: T1, marginBottom: 6 }}>Welcome back</p>
-        <p style={{ fontSize: 14, color: T2, marginBottom: 24 }}>Enter your mobile number to sign in</p>
+        <p style={{ fontSize: 14, color: T2, marginBottom: 24 }}>Sign in to your employer account</p>
 
-        <div style={{
-          display: 'flex', alignItems: 'center', borderRadius: 16,
+        {/* Phone */}
+        <div style={{ display: 'flex', alignItems: 'center', borderRadius: 16,
           border: `1.5px solid ${phone ? T1 : 'rgba(255,255,255,0.1)'}`,
-          background: '#161616', marginBottom: 16, overflow: 'hidden',
-          transition: 'border-color 0.2s',
-        }}>
+          background: '#161616', marginBottom: 12, overflow: 'hidden', transition: 'border-color 0.2s' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px',
             borderRight: '1px solid rgba(255,255,255,0.08)', height: 58, flexShrink: 0 }}>
             <span style={{ fontSize: 20 }}>🇮🇳</span>
@@ -168,27 +71,40 @@ export default function EmployerLoginPage() {
           <input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit number"
             value={phone}
             onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
-            onKeyDown={e => e.key === 'Enter' && sendOTP()}
+            onKeyDown={e => e.key === 'Enter' && document.getElementById('emp-pass')?.focus()}
             style={{ flex: 1, background: 'transparent', outline: 'none', border: 'none',
-              padding: '0 16px', fontSize: 20, fontWeight: 700, color: T1, letterSpacing: 2,
-              height: 58 }} />
+              padding: '0 16px', fontSize: 20, fontWeight: 700, color: T1, letterSpacing: 2, height: 58 }} />
+        </div>
+
+        {/* Password */}
+        <div style={{ display: 'flex', alignItems: 'center', borderRadius: 16,
+          border: `1.5px solid ${password ? T1 : 'rgba(255,255,255,0.1)'}`,
+          background: '#161616', marginBottom: 16, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+          <input id="emp-pass" type={showPass ? 'text' : 'password'} placeholder="Password"
+            value={password}
+            onChange={e => { setPassword(e.target.value); setError('') }}
+            onKeyDown={e => e.key === 'Enter' && login()}
+            style={{ flex: 1, background: 'transparent', outline: 'none', border: 'none',
+              padding: '0 16px', fontSize: 16, fontWeight: 600, color: T1, height: 58 }} />
+          <button onClick={() => setShowPass(s => !s)}
+            style={{ padding: '0 14px', height: 58, background: 'none', border: 'none', cursor: 'pointer',
+              color: T2, display: 'flex', alignItems: 'center' }}>
+            {showPass ? <EyeOff style={{ width: 18, height: 18 }} /> : <Eye style={{ width: 18, height: 18 }} />}
+          </button>
         </div>
 
         {error && <p style={{ fontSize: 13, color: '#EF4444', marginBottom: 12, fontWeight: 600 }}>{error}</p>}
 
-        <button onClick={sendOTP} disabled={!phoneValid || loading}
-          style={{
-            width: '100%', height: 56, borderRadius: 16, border: 'none',
-            background: phoneValid ? T1 : '#1E1E1E',
-            color: phoneValid ? '#000' : T3,
-            fontSize: 16, fontWeight: 800, cursor: phoneValid ? 'pointer' : 'default',
+        <button onClick={login} disabled={!canSubmit || loading}
+          style={{ width: '100%', height: 56, borderRadius: 16, border: 'none',
+            background: canSubmit ? T1 : '#1E1E1E',
+            color: canSubmit ? '#000' : T3,
+            fontSize: 16, fontWeight: 800, cursor: canSubmit ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            transition: 'all 0.2s',
-            boxShadow: phoneValid ? '0 8px 32px rgba(255,255,255,0.12)' : 'none',
-          }}>
+            transition: 'all 0.2s', boxShadow: canSubmit ? '0 8px 32px rgba(255,255,255,0.12)' : 'none' }}>
           {loading
-            ? <><Spinner /><span>Sending OTP…</span></>
-            : <><span>Send OTP</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
+            ? <><Spinner /><span>Signing in…</span></>
+            : <><span>Sign In</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
         </button>
       </div>
 
@@ -206,12 +122,8 @@ export default function EmployerLoginPage() {
 
 function Spinner() {
   return (
-    <div style={{
-      width: 18, height: 18, borderRadius: '50%',
-      border: '2.5px solid rgba(0,0,0,0.2)',
-      borderTopColor: '#000',
-      animation: 'spin 0.7s linear infinite', flexShrink: 0,
-    }}>
+    <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2.5px solid rgba(0,0,0,0.2)',
+      borderTopColor: '#000', animation: 'spin 0.7s linear infinite', flexShrink: 0 }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
