@@ -135,8 +135,12 @@ function RegisterPageInner() {
     if (phone.length < 10) return
     setLoading(true); setOtpError('')
     try {
-      const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
-      await sendPhoneCode(phone)
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setOtpError(data.error || 'Failed to send OTP'); setLoading(false); return }
       setOtpPhase('otp'); setTimeout(() => otpRefs[0].current?.focus(), 200)
     } catch (e: any) { setOtpError(e?.message || 'Failed to send OTP') }
     setLoading(false)
@@ -147,11 +151,9 @@ function RegisterPageInner() {
     if (code.length < 6) return
     setLoading(true); setOtpError('')
     try {
-      const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
-      const { idToken } = await confirmPhoneCode(code)
-      const res = await fetch('/api/auth/firebase-verify', {
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, role: 'WORKER', referralCode: referralCode || undefined }),
+        body: JSON.stringify({ phone, otp: code, role: 'WORKER', referralCode: referralCode || undefined }),
       })
       if (res.ok) { localStorage.setItem('sw_role', 'worker'); go(2) }
       else { const d = await res.json(); setOtpError(d.error || 'Invalid OTP'); setOtp(['','','','','','']); setTimeout(() => otpRefs[0].current?.focus(), 50) }

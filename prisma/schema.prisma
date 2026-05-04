@@ -3,51 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-enum Role {
-  EMPLOYER
-  WORKER
-  ADMIN
-  CAPTAIN
-  OPS
-}
-
-enum CommissionStatus {
-  PENDING
-  APPROVED
-  PAID
-}
-
-enum TaskStatus {
-  OPEN
-  IN_PROGRESS
-  DONE
-  CANCELLED
-}
-
-enum KycStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-  NO_SHOW
-}
-
-enum PaymentStatus {
-  PENDING
-  PAID
-  REFUNDED
-  FAILED
 }
 
 model User {
@@ -56,7 +13,7 @@ model User {
   phone       String   @unique
   email       String?  @unique
   password    String
-  role        Role
+  role        String
   avatar      String?
   isActive    Boolean  @default(true)
   fcmToken    String?
@@ -82,7 +39,7 @@ model Notification {
   userId    String
   title     String
   body      String
-  data      Json?
+  data      String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -117,8 +74,8 @@ model WorkerProfile {
   aadhaarNumber     String?
   aadhaarVerified   Boolean   @default(false)
   videoVerified     Boolean   @default(false)
-  kycStatus         KycStatus @default(PENDING)
-  skills            String[]
+  kycStatus         String    @default("PENDING")
+  skills            String    @default("[]")
   city              String?
   lat               Float?
   lng               Float?
@@ -179,21 +136,21 @@ model Shift {
 }
 
 model Booking {
-  id              String        @id @default(cuid())
+  id              String   @id @default(cuid())
   shiftId         String
   workerProfileId String
   employerId      String
-  status          BookingStatus @default(PENDING)
+  status          String   @default("PENDING")
   totalAmount     Float
   platformFee     Float
   workerEarning   Float
-  paymentStatus   PaymentStatus @default(PENDING)
+  paymentStatus   String   @default("PENDING")
   paymentId       String?
   checkInTime     DateTime?
   checkOutTime    DateTime?
   notes           String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   shift      Shift         @relation(fields: [shiftId], references: [id])
   worker     WorkerProfile @relation(fields: [workerProfileId], references: [id])
@@ -208,14 +165,14 @@ model Booking {
 }
 
 model Payment {
-  id              String        @id @default(cuid())
-  bookingId       String        @unique
+  id              String   @id @default(cuid())
+  bookingId       String   @unique
   razorpayOrderId String?
   razorpayPaymentId String?
   amount          Float
-  currency        String        @default("INR")
-  status          PaymentStatus @default(PENDING)
-  createdAt       DateTime      @default(now())
+  currency        String   @default("INR")
+  status          String   @default("PENDING")
+  createdAt       DateTime @default(now())
 
   booking Booking @relation(fields: [bookingId], references: [id])
 }
@@ -278,13 +235,13 @@ model CaptainProfile {
 }
 
 model Commission {
-  id               String           @id @default(cuid())
+  id               String   @id @default(cuid())
   captainProfileId String
-  bookingId        String           @unique
-  amount           Float            @default(100)
-  status           CommissionStatus @default(PENDING)
+  bookingId        String   @unique
+  amount           Float    @default(100)
+  status           String   @default("PENDING")
   paidAt           DateTime?
-  createdAt        DateTime         @default(now())
+  createdAt        DateTime @default(now())
 
   captain CaptainProfile @relation(fields: [captainProfileId], references: [id], onDelete: Cascade)
   booking Booking        @relation(fields: [bookingId], references: [id])
@@ -293,15 +250,15 @@ model Commission {
 }
 
 model CaptainTask {
-  id               String     @id @default(cuid())
+  id               String    @id @default(cuid())
   captainProfileId String
   assignedByUserId String
   title            String
   description      String?
   dueDate          DateTime?
-  status           TaskStatus @default(OPEN)
+  status           String    @default("OPEN")
   completedAt      DateTime?
-  createdAt        DateTime   @default(now())
+  createdAt        DateTime  @default(now())
 
   captain CaptainProfile @relation(fields: [captainProfileId], references: [id], onDelete: Cascade)
 

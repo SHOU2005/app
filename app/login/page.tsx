@@ -23,17 +23,16 @@ export default function LoginPage() {
     if (!phoneValid || loading) return
     setLoading(true); setError('')
     try {
-      const chk = await fetch('/api/auth/check-phone', {
+      const res = await fetch('/api/auth/send-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone, mode: 'login' }),
       })
-      const chkData = await chk.json()
-      if (!chkData.exists && phone !== '9205617375') {
-        router.push(`/register?phone=${encodeURIComponent(phone)}`)
+      const data = await res.json()
+      if (!res.ok) {
+        if (data.notRegistered) { router.push(`/register?phone=${encodeURIComponent(phone)}`); return }
+        setError(data.error || 'Failed to send OTP. Try again.')
         return
       }
-      const { sendPhoneCode } = await import('@/lib/firebase-phone-auth')
-      await sendPhoneCode(phone)
       setPhase('otp')
       startResendTimer()
     } catch (e: any) {
@@ -45,11 +44,9 @@ export default function LoginPage() {
     if (otp.length < 6 || loading) return
     setLoading(true); setError('')
     try {
-      const { confirmPhoneCode } = await import('@/lib/firebase-phone-auth')
-      const { idToken } = await confirmPhoneCode(otp)
-      const res = await fetch('/api/auth/firebase-verify', {
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, role: 'WORKER' }),
+        body: JSON.stringify({ phone, otp, role: 'WORKER' }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Invalid OTP'); setOtp(''); return }
