@@ -22,7 +22,7 @@ function RegisterForm() {
 
   const phoneOk  = /^\d{10}$/.test(phone)
   const otpOk    = /^\d{6}$/.test(otp)
-  const formOk   = name.trim().length > 1 && phoneOk
+  const formOk   = name.trim().length > 1 && phoneOk && city.trim().length > 0
 
   async function handleSendOtp() {
     if (!formOk || loading) return
@@ -42,7 +42,7 @@ function RegisterForm() {
       const { idToken } = await confirmPhoneCode(otp)
       const res = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, role: 'CAPTAIN', name: name.trim(), territory: city.trim() || undefined }),
+        body: JSON.stringify({ idToken, role: 'CAPTAIN', name: name.trim(), territory: city.trim() }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || t('registerFailed')); return }
@@ -120,7 +120,7 @@ function RegisterForm() {
         {/* City */}
         <div style={{ marginBottom: 16 }}>
           <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' as const, display: 'block', marginBottom: 8 }}>
-            {t('cityTerritory')}
+            {t('cityTerritoryLabel')} *
           </label>
           <input
             type="text" placeholder={t('cityPlaceholder')}

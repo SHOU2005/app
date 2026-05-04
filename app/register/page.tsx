@@ -87,7 +87,7 @@ function RegisterForm() {
 
   const phoneOk = /^\d{10}$/.test(phone)
   const otpOk   = /^\d{6}$/.test(otp)
-  const step1Ok = name.trim().length >= 2 && phoneOk
+  const step1Ok = name.trim().length >= 2 && phoneOk && city.trim().length > 0
 
   const TOTAL_STEPS = 4
   const stepLabel = ['Your Info', 'Work Types', 'Profile Photo & ID Front', 'ID Back & Complete']
@@ -110,7 +110,7 @@ function RegisterForm() {
       const { idToken } = await confirmPhoneCode(otp)
       const res = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, role: 'WORKER', name: name.trim(), city: city.trim() || undefined, referralCode: referral || undefined }),
+        body: JSON.stringify({ idToken, role: 'WORKER', name: name.trim(), city: city.trim(), referralCode: referral || undefined }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Registration failed'); return }
@@ -245,10 +245,10 @@ function RegisterForm() {
             </div>
 
             <div style={{ marginBottom: 14 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: 'rgba(0,0,0,0.5)', marginBottom: 8 }}>City <span style={{ fontWeight: 400 }}>(optional)</span></p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'rgba(0,0,0,0.5)', marginBottom: 8 }}>City *</p>
               <input value={city} onChange={e => setCity(e.target.value)} placeholder="e.g. Mumbai, Delhi" disabled={otpSent}
                 style={{ width: '100%', height: 54, paddingLeft: 16, paddingRight: 16, borderRadius: 14,
-                  background: '#F5F5F5', border: '1.5px solid rgba(0,0,0,0.1)',
+                  background: '#F5F5F5', border: `1.5px solid ${city.trim() ? '#111111' : 'rgba(0,0,0,0.1)'}`,
                   fontSize: 16, fontWeight: 600, color: '#111111', outline: 'none', boxSizing: 'border-box',
                   opacity: otpSent ? 0.6 : 1 }} />
             </div>
