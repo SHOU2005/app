@@ -57,6 +57,13 @@ npm-debug.log*
 *.icloud
 .vercel
 
+# SQLite database
+prisma/dev.db
+prisma/*.db
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+
 # Android signing
 keystore/
 */signing.properties
