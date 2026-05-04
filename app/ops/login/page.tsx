@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Eye, EyeOff } from 'lucide-react'
 
 const BG   = '#000000'
 const S1   = '#0F0F0F'
@@ -11,42 +12,27 @@ const FONT = '"DM Sans", system-ui, sans-serif'
 
 export default function OpsLoginPage() {
   const router = useRouter()
-  const [phone,   setPhone]   = useState('')
-  const [otp,     setOtp]     = useState('')
-  const [phase,   setPhase]   = useState<'phone' | 'otp'>('phone')
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState('')
+  const [phone,    setPhone]    = useState('')
+  const [password, setPassword] = useState('')
+  const [showPass, setShowPass] = useState(false)
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState('')
 
-  async function sendOTP() {
-    if (phone.length !== 10) { setError('Enter a valid 10-digit number'); return }
+  const canSubmit = /^\d{10}$/.test(phone) && password.length >= 6
+
+  async function login() {
+    if (!canSubmit || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/send-otp', {
+      const res = await fetch('/api/auth/ops-login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, mode: 'login' }),
+        body: JSON.stringify({ phone, password }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Failed to send OTP'); return }
-      setPhase('otp')
-    } catch (e: any) {
-      setError(e?.message || 'Failed to send OTP')
-    } finally { setLoading(false) }
-  }
-
-  async function verifyOTP() {
-    if (otp.length < 6) return
-    setLoading(true); setError('')
-    try {
-      const res = await fetch('/api/auth/verify-otp', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp, role: 'OPS' }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Invalid OTP'); return }
-      if (data.role !== 'OPS') { setError('Not an Ops account'); return }
+      if (!res.ok) { setError(data.error || 'Login failed'); return }
       router.replace('/ops')
-    } catch (e: any) {
-      setError(e?.message || 'Verification failed')
+    } catch {
+      setError('Network error. Try again.')
     } finally { setLoading(false) }
   }
 
@@ -59,42 +45,37 @@ export default function OpsLoginPage() {
           <p style={{ color: T2, fontSize: 14, margin: '6px 0 0' }}>Internal operations team login</p>
         </div>
 
-        {phase === 'phone' ? (
-          <>
-            <label style={{ fontSize: 13, fontWeight: 600, color: T2, display: 'block', marginBottom: 8 }}>Mobile Number</label>
-            <input
-              style={{ width: '100%', background: '#1C1C1C', border: `1px solid ${BD}`, borderRadius: 12, padding: '14px 16px', color: T1, fontSize: 18, fontWeight: 600, letterSpacing: 2, outline: 'none', boxSizing: 'border-box' }}
-              type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit number"
-              value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
-              onKeyDown={e => e.key === 'Enter' && sendOTP()}
-            />
-            {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
-            <button onClick={sendOTP} disabled={loading || phone.length !== 10}
-              style={{ width: '100%', marginTop: 16, padding: '14px', borderRadius: 12, background: T1, color: '#000000', fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer', opacity: phone.length !== 10 ? 0.4 : 1 }}>
-              {loading ? 'Verify & Send OTP…' : 'Send OTP'}
-            </button>
-          </>
-        ) : (
-          <>
-            <p style={{ color: T2, fontSize: 14, marginBottom: 12 }}>6-digit OTP sent to +91 {phone}</p>
-            <input
-              style={{ width: '100%', background: '#1C1C1C', border: `1px solid ${BD}`, borderRadius: 12, padding: '14px 16px', color: T1, fontSize: 28, fontWeight: 800, letterSpacing: 12, textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
-              type="tel" inputMode="numeric" maxLength={6} placeholder="OTP"
-              value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
-              onKeyDown={e => e.key === 'Enter' && verifyOTP()}
-              autoFocus
-            />
-            {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{error}</p>}
-            <button onClick={verifyOTP} disabled={loading || otp.length < 6}
-              style={{ width: '100%', marginTop: 16, padding: '14px', borderRadius: 12, background: T1, color: '#000000', fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer', opacity: otp.length < 6 ? 0.4 : 1 }}>
-              {loading ? 'Verifying…' : 'Login'}
-            </button>
-            <button onClick={() => { setPhase('phone'); setOtp(''); setError('') }}
-              style={{ display: 'block', margin: '10px auto 0', background: 'none', border: 'none', color: T2, cursor: 'pointer', fontSize: 13 }}>
-              ← Change number
-            </button>
-          </>
-        )}
+        {/* Phone */}
+        <label style={{ fontSize: 13, fontWeight: 600, color: T2, display: 'block', marginBottom: 8 }}>Mobile Number</label>
+        <input
+          style={{ width: '100%', background: '#1C1C1C', border: `1px solid ${BD}`, borderRadius: 12, padding: '14px 16px', color: T1, fontSize: 18, fontWeight: 600, letterSpacing: 2, outline: 'none', boxSizing: 'border-box', marginBottom: 16 }}
+          type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit number"
+          value={phone} onChange={e => { setPhone(e.target.value.replace(/\D/g, '')); setError('') }}
+          onKeyDown={e => e.key === 'Enter' && document.getElementById('ops-pass')?.focus()}
+        />
+
+        {/* Password */}
+        <label style={{ fontSize: 13, fontWeight: 600, color: T2, display: 'block', marginBottom: 8 }}>Password</label>
+        <div style={{ position: 'relative', marginBottom: 8 }}>
+          <input
+            id="ops-pass"
+            style={{ width: '100%', background: '#1C1C1C', border: `1px solid ${BD}`, borderRadius: 12, padding: '14px 48px 14px 16px', color: T1, fontSize: 16, fontWeight: 600, outline: 'none', boxSizing: 'border-box' }}
+            type={showPass ? 'text' : 'password'} placeholder="Enter password"
+            value={password} onChange={e => { setPassword(e.target.value); setError('') }}
+            onKeyDown={e => e.key === 'Enter' && login()}
+          />
+          <button onClick={() => setShowPass(s => !s)}
+            style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: T2, display: 'flex', alignItems: 'center', padding: 0 }}>
+            {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+
+        {error && <p style={{ color: '#EF4444', fontSize: 13, marginTop: 4 }}>{error}</p>}
+
+        <button onClick={login} disabled={!canSubmit || loading}
+          style={{ width: '100%', marginTop: 16, padding: '14px', borderRadius: 12, background: T1, color: '#000000', fontWeight: 800, fontSize: 15, border: 'none', cursor: canSubmit ? 'pointer' : 'default', opacity: canSubmit ? 1 : 0.4, transition: 'opacity 0.2s' }}>
+          {loading ? 'Signing in…' : 'Sign In'}
+        </button>
       </div>
     </div>
   )
