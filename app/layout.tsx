@@ -3,6 +3,7 @@ import './globals.css'
 import { Toaster } from 'react-hot-toast'
 import { LangProvider } from '@/lib/lang'
 import PushToast from '@/components/shared/PushToast'
+import PermissionGate from '@/components/shared/PermissionGate'
 
 export const metadata: Metadata = {
   title:       'Switch – Part-time Jobs',
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="antialiased">
         <LangProvider>
+          <PermissionGate />
           {children}
           <PushToast />
           <Toaster
