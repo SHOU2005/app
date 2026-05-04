@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   manifest:    '/manifest.json',
   icons: { icon: '/icons/icon-192.png', apple: '/icons/icon-512.png' },
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Switch' },
+  other: { 'mobile-web-app-capable': 'yes' },
 }
 
 export const viewport: Viewport = {

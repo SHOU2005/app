@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { signToken, COOKIE_CONFIG } from '@/lib/auth'
+import { ADMIN_PHONE, isValidRole } from '@/lib/config'
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,7 +29,9 @@ export async function POST(req: NextRequest) {
     // Mark OTP as used
     await prisma.otpLog.update({ where: { id: record.id }, data: { verified: true } })
 
-    const ADMIN_PHONE = '9205617375'
+    if (role && !isValidRole(role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    }
 
     // Resolve referral code → captainProfileId
     let captainRefId: string | undefined
@@ -68,11 +71,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Admin can log into any app — sign token with the requested role
     const isAdmin = phone === ADMIN_PHONE
-    const tokenRole = isAdmin
-      ? ((role || 'WORKER') as 'EMPLOYER' | 'WORKER' | 'CAPTAIN' | 'OPS')
-      : (user.role as 'EMPLOYER' | 'WORKER' | 'ADMIN' | 'CAPTAIN' | 'OPS')
+    let tokenRole: 'EMPLOYER' | 'WORKER' | 'ADMIN' | 'CAPTAIN' | 'OPS'
+    if (isAdmin) {
+      tokenRole = (role || 'OPS') as typeof tokenRole
+    } else if (role && role !== user.role) {
+      // For existing users accessing a different app, honour role if they have a profile for it
+      const profileExists =
+        (role === 'CAPTAIN'  && await prisma.captainProfile.findUnique({ where: { userId: user.id } })) ||
+        (role === 'OPS'      && await prisma.opsProfile.findUnique({ where: { userId: user.id } })) ||
+        (role === 'EMPLOYER' && await prisma.employerProfile.findUnique({ where: { userId: user.id } })) ||
+        (role === 'WORKER'   && await prisma.workerProfile.findUnique({ where: { userId: user.id } }))
+      tokenRole = profileExists ? (role as typeof tokenRole) : (user.role as typeof tokenRole)
+    } else {
+      tokenRole = user.role as typeof tokenRole
+    }
 
     // Ensure admin has the required profile for whichever app they're accessing
     if (isAdmin) {

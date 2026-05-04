@@ -1,5 +1,5 @@
-const CACHE = 'captain-v2'
-const PRECACHE = ['/captain-manifest.json', '/icons/icon-192.png']
+const CACHE = 'switch-employer-v1'
+const PRECACHE = ['/employer-manifest.json', '/icons/icon-192.png']
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()))
@@ -16,26 +16,19 @@ self.addEventListener('fetch', e => {
     fetch(e.request).then(res => {
       if (res.ok) { const clone = res.clone(); caches.open(CACHE).then(c => c.put(e.request, clone)) }
       return res
-    }).catch(() => caches.match(e.request).then(cached => cached || caches.match('/captain/login')))
+    }).catch(() => caches.match(e.request))
   )
 })
 
 self.addEventListener('push', e => {
   const data = e.data?.json() ?? {}
-  e.waitUntil(self.registration.showNotification(data.title ?? 'Switch Captain', {
+  e.waitUntil(self.registration.showNotification(data.title ?? 'Switch Employer', {
     body: data.body ?? '', icon: '/icons/icon-192.png', badge: '/icons/icon-192.png',
-    tag: data.tag ?? 'captain-notif', renotify: true,
-    data: { url: data.url ?? '/captain' },
+    data: { url: data.url ?? '/employer' },
   }))
 })
 
 self.addEventListener('notificationclick', e => {
   e.notification.close()
-  const url = e.notification.data?.url ?? '/captain'
-  e.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-      for (const c of clients) { if (c.url.includes('/captain') && 'focus' in c) return c.focus() }
-      return self.clients.openWindow(url)
-    })
-  )
+  e.waitUntil(clients.openWindow(e.notification.data?.url ?? '/employer'))
 })

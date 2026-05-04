@@ -1,46 +1,38 @@
 'use client'
 
-// hearus-4f2fe Firebase project config (public client-side values)
+import { initializeApp, getApps, getApp } from 'firebase/app'
+import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth'
+
+// Firebase client config is public by design — safe to hardcode
 const FIREBASE_CONFIG = {
-  apiKey:            'AIzaSyCk1e3yCrlsn0V6qDa43OwTeLaYuNKX2sE',
+  apiKey:            'AIzaSyDviuzdGV3ZANmLNi8om0oE0ruXysSAzvc',
   authDomain:        'hearus-4f2fe.firebaseapp.com',
+  databaseURL:       'https://hearus-4f2fe-default-rtdb.firebaseio.com',
   projectId:         'hearus-4f2fe',
   storageBucket:     'hearus-4f2fe.appspot.com',
   messagingSenderId: '616412616901',
-  appId:             '1:616412616901:web:5f83157adc3e01fd1478ac',
+  appId:             '1:616412616901:web:7b514459578ab2981478ac',
+  measurementId:     'G-86G1T2CBPD',
 }
 
 const APP_NAME = 'switchnow'
 
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return }
-    const s = document.createElement('script')
-    s.src = src
-    s.async = true
-    s.onload  = () => resolve()
-    s.onerror = () => reject(new Error(`Failed to load: ${src}`))
-    document.head.appendChild(s)
-  })
+function getFirebaseAuth() {
+  const app = getApps().find(a => a.name === APP_NAME) ?? initializeApp(FIREBASE_CONFIG, APP_NAME)
+  const auth = getAuth(app)
+  if (process.env.NODE_ENV === 'development') {
+    auth.settings.appVerificationDisabledForTesting = true
+  }
+  return auth
 }
 
-async function getFirebaseAuth(): Promise<any> {
-  await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js')
-  await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js')
-  const fb = (window as any).firebase
-  const existing = fb.apps?.find((a: any) => a.name === APP_NAME)
-  const app = existing ?? fb.initializeApp(FIREBASE_CONFIG, APP_NAME)
-  return fb.auth(app)
-}
-
-let verifier: any = null
+let verifier: RecaptchaVerifier | null = null
 
 function clearVerifier() {
   if (verifier) {
     try { verifier.clear() } catch {}
     verifier = null
   }
-  // Remove old container so it can be recreated fresh
   const old = document.getElementById('sw-rc-root')
   if (old) old.remove()
 }
@@ -54,25 +46,25 @@ function createContainer(): HTMLElement {
 }
 
 export async function sendPhoneCode(phoneDigits: string): Promise<string> {
-  const auth = await getFirebaseAuth()
+  const auth = getFirebaseAuth()
   clearVerifier()
   const container = createContainer()
 
-  verifier = new (window as any).firebase.auth.RecaptchaVerifier(container, {
+  verifier = new RecaptchaVerifier(auth, container, {
     size: 'invisible',
     callback: () => {},
     'expired-callback': () => { clearVerifier() },
-  }, auth.app)
+  })
 
   try {
-    const result = await auth.signInWithPhoneNumber(`+91${phoneDigits}`, verifier)
+    await verifier.render()
+    const result = await signInWithPhoneNumber(auth, `+91${phoneDigits}`, verifier)
     ;(window as any).__fbConfirm = result
     return 'sent'
   } catch (err: any) {
     clearVerifier()
-    // Surface a human-readable message
     const msg: Record<string, string> = {
-      'auth/billing-not-enabled':  'Firebase billing not enabled. Enable reCAPTCHA Enterprise API in Google Cloud Console.',
+      'auth/billing-not-enabled':  'Firebase billing not enabled. Enable in Google Cloud Console.',
       'auth/invalid-phone-number': 'Invalid phone number.',
       'auth/too-many-requests':    'Too many attempts. Please wait and try again.',
       'auth/captcha-check-failed': 'reCAPTCHA check failed. Reload and try again.',

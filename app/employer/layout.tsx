@@ -1,3 +1,29 @@
+import type { Metadata, Viewport } from 'next'
+import EmployerPWA from './EmployerPWA'
+
+export const metadata: Metadata = {
+  title: 'Switch Employer',
+  description: 'Post jobs and hire verified part-time workers.',
+  manifest: '/employer-manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Switch Employer',
+  },
+  icons: {
+    apple: '/icons/icon-192.png',
+  },
+  other: { 'mobile-web-app-capable': 'yes' },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#000000',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
 export default function EmployerLayout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
@@ -13,6 +39,7 @@ export default function EmployerLayout({ children }: { children: React.ReactNode
       color: '#FFFFFF',
     } as React.CSSProperties}>
       {children}
+      <EmployerPWA />
     </div>
   )
 }

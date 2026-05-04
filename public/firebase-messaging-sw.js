@@ -4,12 +4,14 @@ importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey:            "AIzaSyDA4N-yBgrNvPYXZP3MvbV81slAt3a5hCE",
-  authDomain:        "relay-15824.firebaseapp.com",
-  projectId:         "relay-15824",
-  storageBucket:     "relay-15824.firebasestorage.app",
-  messagingSenderId: "444335957190",
-  appId:             "1:444335957190:web:92c5b2f5b30a7ce16de3c7",
+  apiKey:            "AIzaSyDviuzdGV3ZANmLNi8om0oE0ruXysSAzvc",
+  authDomain:        "hearus-4f2fe.firebaseapp.com",
+  databaseURL:       "https://hearus-4f2fe-default-rtdb.firebaseio.com",
+  projectId:         "hearus-4f2fe",
+  storageBucket:     "hearus-4f2fe.appspot.com",
+  messagingSenderId: "616412616901",
+  appId:             "1:616412616901:web:7b514459578ab2981478ac",
+  measurementId:     "G-86G1T2CBPD",
 });
 
 const messaging = firebase.messaging();

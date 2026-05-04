@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { signToken, COOKIE_CONFIG } from '@/lib/auth'
+import { ADMIN_PHONE, isValidRole } from '@/lib/config'
 
-const PROJECT_ID   = process.env.NEXT_PUBLIC_FIREBASE_AUTH_PROJECT_ID  || 'hearus-4f2fe'
-const API_KEY      = process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY     || ''
-const CREDS_B64    = process.env.HEARUS_FIREBASE_CREDENTIALS_BASE64    || ''
+const API_KEY   = process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY  || ''
+const CREDS_B64 = process.env.HEARUS_FIREBASE_CREDENTIALS_BASE64 || ''
 
 let adminVerify: ((token: string) => Promise<{ phone: string } | null>) | null = null
 
@@ -65,6 +65,11 @@ export async function POST(req: NextRequest) {
 
     if (!idToken) return NextResponse.json({ error: 'idToken required' }, { status: 400 })
 
+    // Validate requested role
+    if (role && !isValidRole(role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    }
+
     const verified = await verifyFirebaseIdToken(idToken)
     if (!verified) return NextResponse.json({ error: 'Invalid or expired Firebase token' }, { status: 401 })
 
@@ -72,8 +77,6 @@ export async function POST(req: NextRequest) {
     if (!phone || !/^\d{10}$/.test(phone)) {
       return NextResponse.json({ error: 'Could not extract phone number from token' }, { status: 400 })
     }
-
-    const ADMIN_PHONE = '9205617375'
 
     let captainRefId: string | undefined
     if (referralCode) {
@@ -144,9 +147,49 @@ export async function POST(req: NextRequest) {
     }
 
     const isAdmin = phone === ADMIN_PHONE
-    const tokenRole = isAdmin
-      ? ((role || 'WORKER') as 'EMPLOYER' | 'WORKER' | 'CAPTAIN' | 'OPS')
-      : (user.role as 'EMPLOYER' | 'WORKER' | 'ADMIN' | 'CAPTAIN' | 'OPS')
+
+    // For existing users logging in via a specific app, honour the requested role
+    // if they already have (or just created) a profile for it.
+    let tokenRole: 'EMPLOYER' | 'WORKER' | 'ADMIN' | 'CAPTAIN' | 'OPS'
+    if (isAdmin) {
+      tokenRole = (role || 'WORKER') as typeof tokenRole
+    } else if (role && role !== user.role) {
+      // Verify the user actually has a profile for the requested role before issuing that token
+      let hasProfile = false
+      if (role === 'CAPTAIN') {
+        hasProfile = !!(await prisma.captainProfile.findUnique({ where: { userId: user.id } }))
+        if (!hasProfile) {
+          // Auto-create profile so captain registration from login page works
+          await prisma.captainProfile.create({ data: { userId: user.id, status: 'PENDING', ...(territory ? { territory } : {}) } })
+          await prisma.user.update({ where: { id: user.id }, data: { role: 'CAPTAIN' } })
+          hasProfile = true
+        }
+      } else if (role === 'OPS') {
+        hasProfile = !!(await prisma.opsProfile.findUnique({ where: { userId: user.id } }))
+        if (!hasProfile) {
+          await prisma.opsProfile.create({ data: { userId: user.id } })
+          await prisma.user.update({ where: { id: user.id }, data: { role: 'OPS' } })
+          hasProfile = true
+        }
+      } else if (role === 'EMPLOYER') {
+        hasProfile = !!(await prisma.employerProfile.findUnique({ where: { userId: user.id } }))
+        if (!hasProfile) {
+          await prisma.employerProfile.create({ data: { userId: user.id, ...(city ? { city } : {}), ...(companyName ? { companyName } : {}) } })
+          await prisma.user.update({ where: { id: user.id }, data: { role: 'EMPLOYER' } })
+          hasProfile = true
+        }
+      } else if (role === 'WORKER') {
+        hasProfile = !!(await prisma.workerProfile.findUnique({ where: { userId: user.id } }))
+        if (!hasProfile) {
+          await prisma.workerProfile.create({ data: { userId: user.id, ...(city ? { city } : {}) } })
+          await prisma.user.update({ where: { id: user.id }, data: { role: 'WORKER' } })
+          hasProfile = true
+        }
+      }
+      tokenRole = hasProfile ? (role as typeof tokenRole) : (user.role as typeof tokenRole)
+    } else {
+      tokenRole = user.role as typeof tokenRole
+    }
 
     if (isAdmin) {
       if (tokenRole === 'EMPLOYER') {

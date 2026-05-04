@@ -1,53 +1,40 @@
 'use client'
 
-// Firebase config — must match the service worker
+import { initializeApp, getApps } from 'firebase/app'
+import { getMessaging, getToken, onMessage } from 'firebase/messaging'
+
 const FIREBASE_CONFIG = {
-  apiKey:            'AIzaSyDA4N-yBgrNvPYXZP3MvbV81slAt3a5hCE',
-  authDomain:        'relay-15824.firebaseapp.com',
-  projectId:         'relay-15824',
-  storageBucket:     'relay-15824.firebasestorage.app',
-  messagingSenderId: '444335957190',
-  appId:             '1:444335957190:web:92c5b2f5b30a7ce16de3c7',
+  apiKey:            'AIzaSyDviuzdGV3ZANmLNi8om0oE0ruXysSAzvc',
+  authDomain:        'hearus-4f2fe.firebaseapp.com',
+  databaseURL:       'https://hearus-4f2fe-default-rtdb.firebaseio.com',
+  projectId:         'hearus-4f2fe',
+  storageBucket:     'hearus-4f2fe.appspot.com',
+  messagingSenderId: '616412616901',
+  appId:             '1:616412616901:web:7b514459578ab2981478ac',
+  measurementId:     'G-86G1T2CBPD',
 }
 
-// VAPID key — from Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
-// Add this to .env as NEXT_PUBLIC_FIREBASE_VAPID_KEY
+const APP_NAME = 'switchnow'
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || ''
 
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return }
-    const s = document.createElement('script')
-    s.src = src
-    s.onload  = () => resolve()
-    s.onerror = () => reject(new Error(`Failed to load ${src}`))
-    document.head.appendChild(s)
-  })
-}
-
-async function getFirebaseMessaging(): Promise<any> {
-  await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js')
-  await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js')
-  const w = window as any
-  if (!w.firebase.apps?.length) w.firebase.initializeApp(FIREBASE_CONFIG)
-  return w.firebase.messaging()
+function getFirebaseApp() {
+  return getApps().find(a => a.name === APP_NAME) ?? initializeApp(FIREBASE_CONFIG, APP_NAME)
 }
 
 export async function registerFCMToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null
+  if (!('serviceWorker' in navigator)) return null
 
   try {
-    // Ensure SW is registered
-    if (!('serviceWorker' in navigator)) return null
     const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
     await navigator.serviceWorker.ready
 
-    const messaging = await getFirebaseMessaging()
-    const token: string = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg })
+    const app = getFirebaseApp()
+    const messaging = getMessaging(app)
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg })
 
     if (!token) return null
 
-    // Save token to our backend
     await fetch('/api/push/token', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -61,11 +48,12 @@ export async function registerFCMToken(): Promise<string | null> {
   }
 }
 
-export async function setupForegroundMessages(onMessage: (payload: any) => void) {
+export async function setupForegroundMessages(onMsg: (payload: any) => void) {
   if (typeof window === 'undefined') return
   try {
-    const messaging = await getFirebaseMessaging()
-    messaging.onMessage((payload: any) => onMessage(payload))
+    const app = getFirebaseApp()
+    const messaging = getMessaging(app)
+    onMessage(messaging, onMsg)
   } catch (err) {
     console.warn('[FCM] foreground listener failed:', err)
   }

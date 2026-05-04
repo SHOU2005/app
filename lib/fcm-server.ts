@@ -1,7 +1,6 @@
 import { prisma } from './prisma'
 
 const FCM_ENDPOINT = 'https://fcm.googleapis.com/fcm/send'
-// Use legacy server key if set; FIREBASE_CREDENTIALS_BASE64 is accepted as an alias
 const SERVER_KEY = process.env.FIREBASE_SERVER_KEY || ''
 
 export interface PushPayload {

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { comparePassword, hashPassword, signToken, COOKIE_CONFIG } from '@/lib/auth'
+import { comparePassword, signToken, COOKIE_CONFIG } from '@/lib/auth'
+import { ADMIN_PHONE } from '@/lib/config'
 
-const ADMIN_PHONE = '9205617375'
-const ADMIN_PASSWORD = 'admin123'
-
+// Legacy password-based captain login (kept for backwards compat).
+// New logins use /api/auth/firebase-verify via OTP.
 export async function POST(req: NextRequest) {
   try {
     const { phone, password } = await req.json()
@@ -16,19 +16,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Enter a valid 10-digit phone number' }, { status: 400 })
     }
 
-    let user = await prisma.user.findUnique({ where: { phone } })
+    const user = await prisma.user.findUnique({ where: { phone } })
 
-    // Admin: auto-create and accept fixed password
+    if (!user) {
+      return NextResponse.json({ error: 'Phone not registered. Please create an account.' }, { status: 404 })
+    }
+
+    // Admin can access captain portal — verify using stored bcrypt hash only
     if (phone === ADMIN_PHONE) {
-      if (!user) {
-        const hashed = await hashPassword(ADMIN_PASSWORD)
-        user = await prisma.user.create({
-          data: { phone, name: 'Admin', role: 'ADMIN', password: hashed },
-        })
+      if (!user.password) {
+        return NextResponse.json({ error: 'Admin account not set up.' }, { status: 401 })
       }
-      if (password !== ADMIN_PASSWORD) {
-        return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
-      }
+      const valid = await comparePassword(password, user.password)
+      if (!valid) return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
       await prisma.captainProfile.upsert({
         where: { userId: user.id },
         create: { userId: user.id, status: 'ACTIVE' },
@@ -40,20 +40,15 @@ export async function POST(req: NextRequest) {
       return res
     }
 
-    if (!user) {
-      return NextResponse.json({ error: 'Phone not registered. Please create an account.' }, { status: 404 })
-    }
     if (user.role !== 'CAPTAIN') {
       return NextResponse.json({ error: 'Not a captain account' }, { status: 403 })
     }
     if (!user.password) {
-      return NextResponse.json({ error: 'No password set. Please register again.' }, { status: 401 })
+      return NextResponse.json({ error: 'Please use OTP login.' }, { status: 401 })
     }
 
     const valid = await comparePassword(password, user.password)
-    if (!valid) {
-      return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
-    }
+    if (!valid) return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
 
     const token = signToken({ userId: user.id, role: 'CAPTAIN', phone: user.phone })
     const res = NextResponse.json({ success: true, role: 'CAPTAIN' })

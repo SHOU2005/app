@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateOtp } from '@/lib/auth'
 import { sendSMS } from '@/lib/sms'
+import { ADMIN_PHONE } from '@/lib/config'
 
 const RATE_LIMIT_SECONDS = 60
 
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Login mode: reject unregistered numbers (admin phone always allowed)
-    if (mode === 'login' && phone !== '9205617375') {
+    if (mode === 'login' && phone !== ADMIN_PHONE) {
       const user = await prisma.user.findUnique({ where: { phone } })
       if (!user) {
         return NextResponse.json(
@@ -42,8 +43,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const ADMIN_PHONE = '9205617375'
-    const otp       = phone === ADMIN_PHONE ? '123456' : generateOtp()
+    const otp = generateOtp()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
     // Invalidate previous OTPs for this phone
