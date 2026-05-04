@@ -4,14 +4,12 @@ import { initializeApp, getApps } from 'firebase/app'
 import { getMessaging, getToken, onMessage } from 'firebase/messaging'
 
 const FIREBASE_CONFIG = {
-  apiKey:            'AIzaSyDviuzdGV3ZANmLNi8om0oE0ruXysSAzvc',
+  apiKey:            'AIzaSyCk1e3yCrlsn0V6qDa43OwTeLaYuNKX2sE',
   authDomain:        'hearus-4f2fe.firebaseapp.com',
-  databaseURL:       'https://hearus-4f2fe-default-rtdb.firebaseio.com',
   projectId:         'hearus-4f2fe',
   storageBucket:     'hearus-4f2fe.appspot.com',
   messagingSenderId: '616412616901',
-  appId:             '1:616412616901:web:7b514459578ab2981478ac',
-  measurementId:     'G-86G1T2CBPD',
+  appId:             '1:616412616901:web:5f83157adc3e01fd1478ac',
 }
 
 const APP_NAME = 'switchnow'
