@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserPlus, Briefcase, TrendingUp, ListChecks, Award, Copy, Check } from 'lucide-react'
 import CaptainBottomNav from '@/components/captain/CaptainBottomNav'
+import { useLanguage } from './LanguageContext'
 
 const T1   = '#111111'
 const T2   = 'rgba(0,0,0,0.45)'
@@ -28,6 +29,7 @@ interface CaptainProfile {
 
 export default function CaptainDashboard() {
   const router  = useRouter()
+  const { t }   = useLanguage()
   const [user,    setUser]    = useState<{ name: string; captainProfile: CaptainProfile | null } | null>(null)
   const [dash,    setDash]    = useState<DashData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -52,7 +54,7 @@ export default function CaptainDashboard() {
 
   if (loading) return (
     <div style={{ fontFamily: FONT, background: '#FFFFFF', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: T2 }}>Loading…</div>
+      <div style={{ color: T2 }}>{t('loading')}</div>
     </div>
   )
 
@@ -66,12 +68,12 @@ export default function CaptainDashboard() {
       <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40, background: '#FFFFFF', borderBottom: `1px solid ${BD}`, paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: 56 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: T1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 15 }}>
-              {user?.name?.[0]?.toUpperCase() || 'C'}
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: T1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 20, fontWeight: 900, color: '#FFFFFF', lineHeight: 1, letterSpacing: -1, fontFamily: '"DM Sans", sans-serif' }}>S</span>
             </div>
             <div>
-              <p style={{ fontSize: 11, color: T3, margin: 0 }}>Captain</p>
-              <p style={{ fontSize: 16, fontWeight: 700, color: T1, margin: 0 }}>{user?.name || 'Captain'}</p>
+              <p style={{ fontSize: 11, color: T3, margin: 0 }}>{t('captain')}</p>
+              <p style={{ fontSize: 16, fontWeight: 700, color: T1, margin: 0 }}>{user?.name || t('captain')}</p>
             </div>
           </div>
           <span style={{ fontSize: 12, fontWeight: 700, color: T2, padding: '4px 10px', borderRadius: 20, border: `1px solid ${BD}` }}>
@@ -85,48 +87,48 @@ export default function CaptainDashboard() {
         {/* Pending banner */}
         {isPending && (
           <div style={{ background: '#F5F5F5', border: `1px solid ${BD}`, borderRadius: 14, padding: '14px 16px', marginBottom: 20 }}>
-            <p style={{ fontWeight: 700, color: T1, margin: 0, fontSize: 14 }}>Account Under Review</p>
-            <p style={{ color: T2, margin: '4px 0 0', fontSize: 13 }}>The Ops team will activate your account shortly.</p>
+            <p style={{ fontWeight: 700, color: T1, margin: 0, fontSize: 14 }}>{t('accountUnderReview')}</p>
+            <p style={{ color: T2, margin: '4px 0 0', fontSize: 13 }}>{t('opsWillActivate')}</p>
           </div>
         )}
 
-        {/* Commission Hero — black card */}
+        {/* Commission Hero */}
         <div style={{ background: T1, borderRadius: 20, padding: '24px 20px', marginBottom: 20 }}>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: '0 0 4px' }}>Commission this month</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: '0 0 4px' }}>{t('commissionThisMonth')}</p>
           <p style={{ color: '#FFFFFF', fontSize: 36, fontWeight: 800, margin: 0, letterSpacing: -1 }}>₹{dash?.commissionThisMonth ?? 0}</p>
           <div style={{ display: 'flex', gap: 24, marginTop: 16 }}>
             <div>
-              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, margin: '0 0 2px' }}>Pending payout</p>
+              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, margin: '0 0 2px' }}>{t('pendingPayout')}</p>
               <p style={{ color: '#FFFFFF', fontWeight: 700, fontSize: 16, margin: 0 }}>₹{dash?.pendingPayout ?? 0}</p>
             </div>
             <div>
-              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, margin: '0 0 2px' }}>All-time earned</p>
+              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, margin: '0 0 2px' }}>{t('allTimeEarned')}</p>
               <p style={{ color: '#FFFFFF', fontWeight: 700, fontSize: 16, margin: 0 }}>₹{dash?.totalEarnings ?? 0}</p>
             </div>
           </div>
         </div>
 
-        {/* Referral Code Card */}
+        {/* Referral Code */}
         {refCode && (
           <div style={{ background: '#F7F7F7', border: `1px solid ${BD}`, borderRadius: 16, padding: '16px 18px', marginBottom: 20 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: T2, textTransform: 'uppercase', letterSpacing: 1.2, margin: '0 0 10px' }}>Your Referral Code</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: T2, textTransform: 'uppercase', letterSpacing: 1.2, margin: '0 0 10px' }}>{t('yourReferralCode')}</p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <p style={{ fontSize: 28, fontWeight: 900, color: T1, margin: 0, letterSpacing: 4, fontFamily: '"Courier New", monospace' }}>{refCode}</p>
               <button onClick={copyCode} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: `1px solid ${BD}`, background: copied ? T1 : '#FFFFFF', color: copied ? '#FFFFFF' : T1, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
                 {copied ? <Check style={{ width: 14, height: 14 }} /> : <Copy style={{ width: 14, height: 14 }} />}
-                {copied ? 'Copied!' : 'Copy'}
+                {copied ? t('copied') : t('copy')}
               </button>
             </div>
-            <p style={{ fontSize: 12, color: T2, margin: '8px 0 0' }}>Share this code with employers & workers to earn ₹100/booking</p>
+            <p style={{ fontSize: 12, color: T2, margin: '8px 0 0' }}>{t('referralEarnDesc')}</p>
           </div>
         )}
 
         {/* Stats Row */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 24 }}>
           {[
-            { label: 'Employers', value: dash?.employersOnboarded ?? 0, Icon: Briefcase  },
-            { label: 'Workers',   value: dash?.workersOnboarded   ?? 0, Icon: UserPlus   },
-            { label: 'Tasks Due', value: dash?.pendingTasks       ?? 0, Icon: ListChecks },
+            { label: t('employers'), value: dash?.employersOnboarded ?? 0, Icon: Briefcase  },
+            { label: t('workers'),   value: dash?.workersOnboarded   ?? 0, Icon: UserPlus   },
+            { label: t('tasksDue'),  value: dash?.pendingTasks       ?? 0, Icon: ListChecks },
           ].map(({ label, value, Icon }) => (
             <div key={label} style={{ background: '#F7F7F7', borderRadius: 14, padding: '14px 12px', textAlign: 'center' }}>
               <Icon style={{ width: 20, height: 20, color: T2, margin: '0 auto 6px' }} />
@@ -137,15 +139,15 @@ export default function CaptainDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <p style={{ fontSize: 11, fontWeight: 700, color: T2, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.2 }}>Quick Actions</p>
+        <p style={{ fontSize: 11, fontWeight: 700, color: T2, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.2 }}>{t('quickActions')}</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
           {[
-            { label: 'Register Employer', Icon: Briefcase,  href: '/captain/onboard-employer' },
-            { label: 'Register Worker',   Icon: UserPlus,   href: '/captain/onboard-worker'   },
-            { label: 'Commissions',       Icon: TrendingUp, href: '/captain/commissions'       },
-            { label: 'Leaderboard',       Icon: Award,      href: '/captain/leaderboard'       },
+            { label: t('registerEmployer'), Icon: Briefcase,  href: '/captain/onboard-employer' },
+            { label: t('registerWorker'),   Icon: UserPlus,   href: '/captain/onboard-worker'   },
+            { label: t('commissions'),      Icon: TrendingUp, href: '/captain/commissions'       },
+            { label: t('leaderboard'),      Icon: Award,      href: '/captain/leaderboard'       },
           ].map(({ label, Icon, href }) => (
-            <a key={label} href={href} style={{ background: '#F7F7F7', borderRadius: 14, padding: '16px', display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
+            <a key={href} href={href} style={{ background: '#F7F7F7', borderRadius: 14, padding: '16px', display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: '#EBEBEB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon style={{ width: 18, height: 18, color: T1 }} />
               </div>
@@ -157,8 +159,8 @@ export default function CaptainDashboard() {
         {/* Attendance shortcut */}
         <a href="/captain/attendance" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F7F7F7', border: `1px solid ${BD}`, borderRadius: 16, padding: '16px 18px', textDecoration: 'none', marginBottom: 8 }}>
           <div>
-            <p style={{ fontWeight: 700, color: T1, margin: 0, fontSize: 15 }}>Mark Attendance</p>
-            <p style={{ color: T2, margin: '2px 0 0', fontSize: 13 }}>Check in / Check out for today</p>
+            <p style={{ fontWeight: 700, color: T1, margin: 0, fontSize: 15 }}>{t('markAttendance')}</p>
+            <p style={{ color: T2, margin: '2px 0 0', fontSize: 13 }}>{t('checkInOut')}</p>
           </div>
           <span style={{ fontSize: 22 }}>📍</span>
         </a>

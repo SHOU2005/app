@@ -3,10 +3,10 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import TopBar from '@/components/shared/TopBar'
 import CaptainBottomNav from '@/components/captain/CaptainBottomNav'
+import { useLanguage } from '../LanguageContext'
 
 const T1   = '#111111'
 const T2   = 'rgba(0,0,0,0.5)'
-const BLUE = '#111111'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
 type CommissionStatus = 'PENDING' | 'APPROVED' | 'PAID'
@@ -23,6 +23,7 @@ const STATUS_COLORS: Record<CommissionStatus, { bg: string; text: string }> = {
 
 export default function CommissionsPage() {
   const router = useRouter()
+  const { t }  = useLanguage()
   const [tab,         setTab]         = useState<CommissionStatus>('PENDING')
   const [commissions, setCommissions] = useState<Commission[]>([])
   const [summary,     setSummary]     = useState({ pendingPayout: 0, totalEarnings: 0, earnedThisMonth: 0 })
@@ -41,14 +42,14 @@ export default function CommissionsPage() {
 
   return (
     <div style={{ fontFamily: FONT, background: '#FFFFFF', minHeight: '100vh', paddingTop: 'calc(64px + env(safe-area-inset-top,0px))', paddingBottom: 'calc(88px + env(safe-area-inset-bottom,0px))' }}>
-      <TopBar title="Commissions" />
+      <TopBar title={t('commissions')} />
 
       {/* Summary strip */}
-      <div style={{ background: BLUE, padding: '16px 20px', display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ background: T1, padding: '16px 20px', display: 'flex', justifyContent: 'space-between' }}>
         {[
-          { label: 'This Month', value: `₹${summary.earnedThisMonth}` },
-          { label: 'Pending', value: `₹${summary.pendingPayout}` },
-          { label: 'All Time', value: `₹${summary.totalEarnings}` },
+          { label: t('thisMonth'), value: `₹${summary.earnedThisMonth}` },
+          { label: t('pending'),   value: `₹${summary.pendingPayout}` },
+          { label: t('allTime'),   value: `₹${summary.totalEarnings}` },
         ].map(({ label, value }) => (
           <div key={label} style={{ textAlign: 'center' }}>
             <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, margin: 0 }}>{label}</p>
@@ -59,18 +60,18 @@ export default function CommissionsPage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '0 20px' }}>
-        {(['PENDING', 'APPROVED', 'PAID'] as CommissionStatus[]).map(t => (
-          <button key={t} onClick={() => { setLoading(true); setTab(t) }} style={{ flex: 1, padding: '12px 0', fontWeight: 700, fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', color: tab === t ? BLUE : T2, borderBottom: tab === t ? `2px solid ${BLUE}` : '2px solid transparent' }}>
-            {t}
+        {(['PENDING', 'APPROVED', 'PAID'] as CommissionStatus[]).map(tab_ => (
+          <button key={tab_} onClick={() => { setLoading(true); setTab(tab_) }} style={{ flex: 1, padding: '12px 0', fontWeight: 700, fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', color: tab === tab_ ? T1 : T2, borderBottom: tab === tab_ ? `2px solid ${T1}` : '2px solid transparent' }}>
+            {tab_}
           </button>
         ))}
       </div>
 
       <div style={{ padding: '16px 20px' }}>
         {loading ? (
-          <div style={{ color: T2, textAlign: 'center', paddingTop: 40 }}>Loading…</div>
+          <div style={{ color: T2, textAlign: 'center', paddingTop: 40 }}>{t('loading')}</div>
         ) : commissions.length === 0 ? (
-          <p style={{ color: T2, textAlign: 'center', paddingTop: 40 }}>No {tab.toLowerCase()} commissions</p>
+          <p style={{ color: T2, textAlign: 'center', paddingTop: 40 }}>{t('noCommissions')}</p>
         ) : commissions.map(c => {
           const sc = STATUS_COLORS[c.status]
           return (

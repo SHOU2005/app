@@ -2,17 +2,19 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Users, CheckSquare, User } from 'lucide-react'
-
-const TABS = [
-  { href: '/captain',           label: 'Home',      Icon: Home        },
-  { href: '/captain/referrals', label: 'Referrals', Icon: Users       },
-  { href: '/captain/tasks',     label: 'Tasks',     Icon: CheckSquare },
-  { href: '/captain/profile',   label: 'Profile',   Icon: User        },
-]
+import { useLanguage } from '@/app/captain/LanguageContext'
 
 export default function CaptainBottomNav({ active }: { active?: string }) {
   const pathname = usePathname()
+  const { t }    = useLanguage()
   const current  = active ?? pathname
+
+  const TABS = [
+    { href: '/captain',           label: t('home'),      Icon: Home        },
+    { href: '/captain/referrals', label: t('referrals'), Icon: Users       },
+    { href: '/captain/tasks',     label: t('tasks'),     Icon: CheckSquare },
+    { href: '/captain/profile',   label: t('profile'),   Icon: User        },
+  ]
 
   return (
     <nav className="bottom-nav">

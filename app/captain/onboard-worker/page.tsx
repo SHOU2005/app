@@ -3,16 +3,18 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import TopBar from '@/components/shared/TopBar'
 import CaptainBottomNav from '@/components/captain/CaptainBottomNav'
+import { useLanguage } from '../LanguageContext'
+import type { TKey } from '../i18n'
 
 const T1   = '#111111'
 const T2   = 'rgba(0,0,0,0.5)'
-const BLUE = '#111111'
 const FONT = '"DM Sans", system-ui, sans-serif'
 
-const SKILL_OPTIONS = ['Cleaning', 'Cooking', 'Security', 'Driving', 'Delivery', 'Warehouse', 'Reception', 'Retail', 'Housekeeping', 'Other']
+const SKILL_KEYS: TKey[] = ['skillCleaning','skillCooking','skillSecurity','skillDriving','skillDelivery','skillWarehouse','skillReception','skillRetail','skillHousekeeping','skillOther']
 
 export default function OnboardWorkerPage() {
   const router = useRouter()
+  const { t }  = useLanguage()
   const [step,    setStep]    = useState(1)
   const [name,    setName]    = useState('')
   const [phone,   setPhone]   = useState('')
@@ -40,20 +42,20 @@ export default function OnboardWorkerPage() {
 
   return (
     <div style={{ fontFamily: FONT, background: '#FFFFFF', minHeight: '100vh', paddingTop: 'calc(64px + env(safe-area-inset-top,0px))', paddingBottom: 'calc(88px + env(safe-area-inset-bottom,0px))' }}>
-      <TopBar title="Register Worker" />
+      <TopBar title={t('registerWorker')} />
 
       <div style={{ display: 'flex', gap: 8, padding: '16px 20px' }}>
-        {[1, 2, 3].map(s => <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? '#111111' : '#E5E7EB', transition: 'background 0.3s' }} />)}
+        {[1, 2, 3].map(s => <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? T1 : '#E5E7EB', transition: 'background 0.3s' }} />)}
       </div>
 
       <div style={{ padding: '0 20px' }}>
         {step === 1 && (
           <>
-            <p style={{ fontWeight: 700, color: T1, fontSize: 18, marginBottom: 20 }}>Worker Details</p>
+            <p style={{ fontWeight: 700, color: T1, fontSize: 18, marginBottom: 20 }}>{t('workerDetails')}</p>
             {[
-              { label: 'Full Name *', value: name, setter: setName, placeholder: 'Worker full name', type: 'text' },
-              { label: 'Mobile Number *', value: phone, setter: setPhone, placeholder: '10-digit number', type: 'tel', maxLen: 10, numeric: true },
-              { label: 'City', value: city, setter: setCity, placeholder: 'e.g. Bangalore', type: 'text' },
+              { label: t('fullNameRequired'), value: name, setter: setName, placeholder: t('workerNamePlaceholder'), type: 'text' },
+              { label: t('mobileRequired'),   value: phone, setter: setPhone, placeholder: t('phonePlaceholder'), type: 'tel', maxLen: 10, numeric: true },
+              { label: t('city'),             value: city, setter: setCity,  placeholder: t('cityPlaceholder'), type: 'text' },
             ].map(f => (
               <div key={f.label} style={{ marginBottom: 16 }}>
                 <label style={{ fontSize: 13, fontWeight: 600, color: T2, display: 'block', marginBottom: 6 }}>{f.label}</label>
@@ -61,26 +63,29 @@ export default function OnboardWorkerPage() {
               </div>
             ))}
             {error && <p style={{ color: '#EF4444', fontSize: 13 }}>{error}</p>}
-            <button className="btn btn-primary btn-lg btn-full" style={{ marginTop: 8, background: BLUE, borderRadius: 14 }} onClick={() => { if (!name || phone.length !== 10) { setError('Fill required fields'); return }; setError(''); setStep(2) }}>
-              Next →
+            <button className="btn btn-primary btn-lg btn-full" style={{ marginTop: 8, background: T1, borderRadius: 14 }} onClick={() => { if (!name || phone.length !== 10) { setError(t('fillRequiredFields')); return }; setError(''); setStep(2) }}>
+              {t('next')}
             </button>
           </>
         )}
 
         {step === 2 && (
           <>
-            <p style={{ fontWeight: 700, color: T1, fontSize: 18, marginBottom: 8 }}>Skills</p>
-            <p style={{ color: T2, fontSize: 14, marginBottom: 16 }}>Select the worker's skills</p>
+            <p style={{ fontWeight: 700, color: T1, fontSize: 18, marginBottom: 8 }}>{t('skills')}</p>
+            <p style={{ color: T2, fontSize: 14, marginBottom: 16 }}>{t('selectSkills')}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
-              {SKILL_OPTIONS.map(s => (
-                <button key={s} onClick={() => toggleSkill(s)} style={{ padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, border: `1px solid ${skills.includes(s) ? '#111111' : 'rgba(0,0,0,0.12)'}`, background: skills.includes(s) ? '#F5F5F5' : '#FFFFFF', color: skills.includes(s) ? '#111111' : T2, cursor: 'pointer' }}>
-                  {s}
-                </button>
-              ))}
+              {SKILL_KEYS.map(key => {
+                const label = t(key)
+                return (
+                  <button key={key} onClick={() => toggleSkill(label)} style={{ padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, border: `1px solid ${skills.includes(label) ? T1 : 'rgba(0,0,0,0.12)'}`, background: skills.includes(label) ? '#F5F5F5' : '#FFFFFF', color: skills.includes(label) ? T1 : T2, cursor: 'pointer' }}>
+                    {label}
+                  </button>
+                )
+              })}
             </div>
             {error && <p style={{ color: '#EF4444', fontSize: 13 }}>{error}</p>}
-            <button className="btn btn-primary btn-lg btn-full" style={{ background: '#111111', borderRadius: 14 }} onClick={submit} disabled={loading}>
-              {loading ? 'Registering…' : 'Register Worker'}
+            <button className="btn btn-primary btn-lg btn-full" style={{ background: T1, borderRadius: 14 }} onClick={submit} disabled={loading}>
+              {loading ? t('registering') : t('registerWorker')}
             </button>
           </>
         )}
@@ -88,15 +93,15 @@ export default function OnboardWorkerPage() {
         {step === 3 && (
           <div style={{ textAlign: 'center', paddingTop: 40 }}>
             <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
-            <p style={{ fontSize: 22, fontWeight: 800, color: T1, marginBottom: 8 }}>Worker Registered!</p>
-            <p style={{ color: T2, fontSize: 15, marginBottom: 16 }}><strong>{name}</strong> has been added to the platform.</p>
+            <p style={{ fontSize: 22, fontWeight: 800, color: T1, marginBottom: 8 }}>{t('workerRegistered')}</p>
+            <p style={{ color: T2, fontSize: 15, marginBottom: 16 }}><strong>{name}</strong> {t('workerAddedDesc')}</p>
             <div style={{ background: '#F7F7F7', borderRadius: 14, padding: '14px 16px', marginBottom: 24, textAlign: 'left' }}>
-              <p style={{ fontWeight: 700, color: BLUE, margin: '0 0 4px', fontSize: 14 }}>Next Step for Worker</p>
-              <p style={{ color: T2, margin: 0, fontSize: 13 }}>Ask <strong>{name}</strong> to download the Switch Worker app and complete their KYC (Aadhaar + Selfie) to start accepting shifts.</p>
+              <p style={{ fontWeight: 700, color: T1, margin: '0 0 4px', fontSize: 14 }}>{t('nextStepForWorker')}</p>
+              <p style={{ color: T2, margin: 0, fontSize: 13 }}>{t('downloadSwitchWorker')}</p>
             </div>
-            <p style={{ color: '#111111', fontSize: 14, fontWeight: 600 }}>You will earn ₹100 commission when they complete their first shift.</p>
-            <button className="btn btn-primary btn-lg btn-full" style={{ marginTop: 24, background: BLUE, borderRadius: 14 }} onClick={() => router.push('/captain')}>
-              Back to Home
+            <p style={{ color: T1, fontSize: 14, fontWeight: 600 }}>{t('commissionNote')}</p>
+            <button className="btn btn-primary btn-lg btn-full" style={{ marginTop: 24, background: T1, borderRadius: 14 }} onClick={() => router.push('/captain')}>
+              {t('backToHome')}
             </button>
           </div>
         )}

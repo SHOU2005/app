@@ -2,12 +2,14 @@
 import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react'
+import { useLanguage } from '../LanguageContext'
 
 const FONT = '"DM Sans", system-ui, sans-serif'
 
 function RegisterForm() {
   const router = useRouter()
   const params = useSearchParams()
+  const { t }  = useLanguage()
 
   const [name,     setName]     = useState('')
   const [phone,    setPhone]    = useState(params.get('phone') || '')
@@ -19,7 +21,7 @@ function RegisterForm() {
   const [error,    setError]    = useState('')
 
   const passwordStrength = password.length === 0 ? 0 : password.length < 6 ? 1 : password.length < 10 ? 2 : 3
-  const strengthLabel = ['', 'Weak', 'Good', 'Strong']
+  const strengthLabel = ['', t('weak'), t('good'), t('strong')]
   const strengthColor = ['', '#EF4444', '#F59E0B', '#22C55E']
 
   const canSubmit = name.trim().length > 1 && /^\d{10}$/.test(phone) && password.length >= 6 && password === confirm
@@ -33,10 +35,10 @@ function RegisterForm() {
         body: JSON.stringify({ phone, name: name.trim(), password, city: city.trim() }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Registration failed'); return }
+      if (!res.ok) { setError(data.error || t('registerFailed')); return }
       router.replace('/captain')
     } catch {
-      setError('Network error. Check your connection.')
+      setError(t('networkError'))
     } finally { setLoading(false) }
   }
 
@@ -46,17 +48,19 @@ function RegisterForm() {
       {/* Header */}
       <div style={{ background: '#111111', padding: '40px 24px 28px', paddingTop: 'calc(40px + env(safe-area-inset-top))' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 14, background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🧭</div>
+          <div style={{ width: 44, height: 44, borderRadius: 14, background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <span style={{ fontSize: 26, fontWeight: 900, color: '#111111', lineHeight: 1, letterSpacing: -1, fontFamily: '"DM Sans", sans-serif' }}>S</span>
+          </div>
           <div>
-            <p style={{ fontSize: 18, fontWeight: 900, color: '#FFFFFF', margin: 0 }}>Join as Captain</p>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: 0 }}>Earn ₹100 per worker placed</p>
+            <p style={{ fontSize: 18, fontWeight: 900, color: '#FFFFFF', margin: 0 }}>{t('joinAsCaptain')}</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: 0 }}>{t('joinTagline')}</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {['Onboard Workers', 'Build Territory', 'Daily Commissions'].map(t => (
-            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {[t('onboardWorkers'), t('buildTerritory'), t('dailyCommissions')].map(txt => (
+            <div key={txt} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <CheckCircle style={{ width: 11, height: 11, color: '#22C55E' }} />
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>{t}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>{txt}</span>
             </div>
           ))}
         </div>
@@ -65,27 +69,27 @@ function RegisterForm() {
       {/* Form card */}
       <div style={{ flex: 1, background: '#FFFFFF', borderRadius: '24px 24px 0 0', marginTop: -16, padding: '28px 24px', paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}>
 
-        <h2 style={{ fontSize: 22, fontWeight: 900, color: '#111111', margin: '0 0 6px' }}>Create your account</h2>
-        <p style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)', margin: '0 0 24px' }}>Fill in the details below to get started</p>
+        <h2 style={{ fontSize: 22, fontWeight: 900, color: '#111111', margin: '0 0 6px' }}>{t('createYourAccount')}</h2>
+        <p style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)', margin: '0 0 24px' }}>{t('fillDetails')}</p>
 
         {/* Full name */}
-        <Field label="Full Name">
+        <Field label={t('fullName')}>
           <input
-            type="text" placeholder="Your full name"
+            type="text" placeholder={t('namePlaceholder')}
             value={name} onChange={e => { setName(e.target.value); setError('') }}
             style={inputStyle(!!name)}
           />
         </Field>
 
         {/* Phone */}
-        <Field label="Mobile Number">
+        <Field label={t('mobileNumber')}>
           <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${phone ? '#111111' : 'rgba(0,0,0,0.12)'}`, borderRadius: 14, background: '#FAFAFA', overflow: 'hidden', transition: 'border-color 0.15s' }}>
             <div style={{ padding: '0 14px', borderRight: '1px solid rgba(0,0,0,0.08)', height: 54, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <span style={{ fontSize: 18 }}>🇮🇳</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#111111' }}>+91</span>
             </div>
             <input
-              type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit number"
+              type="tel" inputMode="numeric" maxLength={10} placeholder={t('phonePlaceholder')}
               value={phone} onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', padding: '0 14px', fontSize: 18, fontWeight: 700, color: '#111111', letterSpacing: 2, height: 54 }}
             />
@@ -93,20 +97,20 @@ function RegisterForm() {
         </Field>
 
         {/* City */}
-        <Field label="City / Territory (optional)">
+        <Field label={t('cityTerritory')}>
           <input
-            type="text" placeholder="e.g. Mumbai, Delhi"
+            type="text" placeholder={t('cityPlaceholder')}
             value={city} onChange={e => setCity(e.target.value)}
             style={inputStyle(!!city)}
           />
         </Field>
 
         {/* Password */}
-        <Field label="Password">
+        <Field label={t('password')}>
           <div style={{ position: 'relative' }}>
             <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${password ? '#111111' : 'rgba(0,0,0,0.12)'}`, borderRadius: 14, background: '#FAFAFA', overflow: 'hidden', transition: 'border-color 0.15s' }}>
               <input
-                type={showPass ? 'text' : 'password'} placeholder="Min 6 characters"
+                type={showPass ? 'text' : 'password'} placeholder={t('minChars')}
                 value={password} onChange={e => { setPassword(e.target.value); setError('') }}
                 style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', padding: '0 14px', fontSize: 16, fontWeight: 600, color: '#111111', height: 54 }}
               />
@@ -126,10 +130,10 @@ function RegisterForm() {
         </Field>
 
         {/* Confirm password */}
-        <Field label="Confirm Password">
+        <Field label={t('confirmPassword')}>
           <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${confirm ? (confirm === password ? '#22C55E' : '#EF4444') : 'rgba(0,0,0,0.12)'}`, borderRadius: 14, background: '#FAFAFA', overflow: 'hidden', transition: 'border-color 0.15s' }}>
             <input
-              type={showPass ? 'text' : 'password'} placeholder="Re-enter password"
+              type={showPass ? 'text' : 'password'} placeholder={t('reenterPassword')}
               value={confirm} onChange={e => { setConfirm(e.target.value); setError('') }}
               onKeyDown={e => e.key === 'Enter' && register()}
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', padding: '0 14px', fontSize: 16, fontWeight: 600, color: '#111111', height: 54 }}
@@ -144,7 +148,7 @@ function RegisterForm() {
             )}
           </div>
           {confirm && confirm !== password && (
-            <p style={{ fontSize: 12, color: '#EF4444', fontWeight: 600, marginTop: 4 }}>Passwords do not match</p>
+            <p style={{ fontSize: 12, color: '#EF4444', fontWeight: 600, marginTop: 4 }}>{t('passwordNoMatch')}</p>
           )}
         </Field>
 
@@ -164,12 +168,12 @@ function RegisterForm() {
             transition: 'all 0.2s', marginBottom: 20,
             boxShadow: canSubmit ? '0 8px 24px rgba(0,0,0,0.18)' : 'none',
           }}>
-          {loading ? <Spinner /> : <><span>Create Account</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
+          {loading ? <Spinner /> : <><span>{t('createAccount')}</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
         </button>
 
         <p style={{ textAlign: 'center', fontSize: 14, color: 'rgba(0,0,0,0.45)', margin: 0 }}>
-          Already registered?{' '}
-          <a href="/captain/login" style={{ color: '#111111', fontWeight: 800, textDecoration: 'none' }}>Sign in →</a>
+          {t('alreadyRegistered')}{' '}
+          <a href="/captain/login" style={{ color: '#111111', fontWeight: 800, textDecoration: 'none' }}>{t('signIn')} →</a>
         </p>
       </div>
     </div>

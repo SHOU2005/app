@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { LanguageProvider } from './LanguageContext'
 import CaptainPWA from './CaptainPWA'
 
 export const metadata: Metadata = {
@@ -25,9 +26,11 @@ export const viewport: Viewport = {
 
 export default function CaptainLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="captain-theme">
-      {children}
-      <CaptainPWA />
-    </div>
+    <LanguageProvider>
+      <div className="captain-theme">
+        {children}
+        <CaptainPWA />
+      </div>
+    </LanguageProvider>
   )
 }
