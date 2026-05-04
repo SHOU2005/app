@@ -59,7 +59,7 @@ export async function pushToUser(
       userId,
       title: payload.title,
       body:  payload.body,
-      data:  payload.data ?? {},
+      data:  payload.data ? JSON.stringify(payload.data) : undefined,
     },
   })
 

@@ -70,7 +70,7 @@ async function main() {
             rating:         w.rating,
             totalShifts:    w.shifts,
             totalEarnings:  w.shifts * 125 * 8,
-            skills:         w.skills,
+            skills:         JSON.stringify(w.skills),
             kycStatus:      'APPROVED',
             aadhaarVerified: true,
             videoVerified:  true,
@@ -141,7 +141,6 @@ async function main() {
           status:        'OPEN',
         },
       ],
-      skipDuplicates: true,
     })
   }
 

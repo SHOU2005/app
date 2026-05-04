@@ -30,7 +30,7 @@ async function getOrCreateDemoWorker() {
   let profile = await prisma.workerProfile.findUnique({ where: { userId: user.id } })
   if (!profile) {
     profile = await prisma.workerProfile.create({
-      data: { userId: user.id, skills: ['General Helper'], city: 'Mumbai', rating: 4.8, isAvailable: true },
+      data: { userId: user.id, skills: JSON.stringify(['General Helper']), city: 'Mumbai', rating: 4.8, isAvailable: true },
     })
   }
   return { user, profile }

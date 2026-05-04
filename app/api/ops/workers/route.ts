@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const workers = await prisma.workerProfile.findMany({
     where: {
-      ...(kycStatus && { kycStatus: kycStatus as 'PENDING' | 'APPROVED' | 'REJECTED' }),
+      ...(kycStatus && { kycStatus }),
       ...(city      && { city }),
     },
     include: { user: { select: { id: true, name: true, phone: true, avatar: true, isActive: true, createdAt: true } } },
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   const total = await prisma.workerProfile.count({
     where: {
-      ...(kycStatus && { kycStatus: kycStatus as 'PENDING' | 'APPROVED' | 'REJECTED' }),
+      ...(kycStatus && { kycStatus }),
       ...(city      && { city }),
     },
   })

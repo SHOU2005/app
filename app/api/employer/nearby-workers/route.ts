@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma'
 import { getTokenFromCookies } from '@/lib/auth'
 import { haversineDistance } from '@/lib/matching'
 
+function parseSkills(s: string | null): string[] {
+  try { return JSON.parse(s || '[]') } catch { return [] }
+}
+
 export async function GET(req: NextRequest) {
   const payload = getTokenFromCookies()
   if (!payload || payload.role !== 'EMPLOYER') {
@@ -45,7 +49,7 @@ export async function GET(req: NextRequest) {
       lat:         w.lat,
       lng:         w.lng,
       rating:      w.rating,
-      skills:      w.skills,
+      skills:      parseSkills(w.skills),
       totalShifts: w.totalShifts,
     })),
   })

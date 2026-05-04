@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getTokenFromCookies } from '@/lib/auth'
 
+function parseSkills(s: string | null): string[] {
+  try { return JSON.parse(s || '[]') } catch { return [] }
+}
+
 export async function GET() {
   const payload = getTokenFromCookies()
   if (!payload || payload.role !== 'WORKER') {
@@ -14,7 +18,10 @@ export async function GET() {
   })
   if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  return NextResponse.json({ user })
+  const result = user.workerProfile
+    ? { ...user, workerProfile: { ...user.workerProfile, skills: parseSkills(user.workerProfile.skills) } }
+    : user
+  return NextResponse.json({ user: result })
 }
 
 export async function PATCH(req: NextRequest) {
@@ -33,14 +40,14 @@ export async function PATCH(req: NextRequest) {
       create: {
         userId: payload.userId,
         ...(city   ? { city }   : {}),
-        ...(skills ? { skills } : {}),
+        ...(skills ? { skills: JSON.stringify(skills) } : {}),
         ...(bio    ? { bio }    : {}),
         ...(lat != null ? { lat } : {}),
         ...(lng != null ? { lng } : {}),
       },
       update: {
         ...(city   ? { city }   : {}),
-        ...(skills ? { skills } : {}),
+        ...(skills ? { skills: JSON.stringify(skills) } : {}),
         ...(bio    ? { bio }    : {}),
         ...(lat != null ? { lat } : {}),
         ...(lng != null ? { lng } : {}),

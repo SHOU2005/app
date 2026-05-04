@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       where: {
         status: 'OPEN',
         date:   dateFilter,
-        ...(city     ? { city: { contains: city, mode: 'insensitive' } } : {}),
+        ...(city     ? { city: { contains: city } }                       : {}),
         ...(role     ? { role }                                           : {}),
         ...(duration ? { duration }                                       : {}),
         bookings: {
