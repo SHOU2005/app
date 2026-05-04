@@ -35,7 +35,11 @@ export async function POST(req: NextRequest) {
     res.cookies.set(COOKIE_CONFIG.name, token, COOKIE_CONFIG.options)
     return res
   } catch (err) {
-    console.error('captain-register error:', err)
-    return NextResponse.json({ error: 'Registration failed. Try again.' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('captain-register error:', msg)
+    return NextResponse.json(
+      { error: process.env.NODE_ENV === 'development' ? `Registration failed: ${msg}` : 'Registration failed. Try again.' },
+      { status: 500 }
+    )
   }
 }
