@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { signToken, COOKIE_CONFIG } from '@/lib/auth'
 
-const PROJECT_ID   = process.env.NEXT_PUBLIC_FIREBASE_AUTH_PROJECT_ID || 'relay-15824'
-const API_KEY      = process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY    || ''
-const CREDS_B64    = process.env.FIREBASE_CREDENTIALS_BASE64          || ''
+const PROJECT_ID   = process.env.NEXT_PUBLIC_FIREBASE_AUTH_PROJECT_ID  || 'hearus-4f2fe'
+const API_KEY      = process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY     || ''
+const CREDS_B64    = process.env.HEARUS_FIREBASE_CREDENTIALS_BASE64    || ''
 
-// ── Option A: Admin SDK via service account (preferred when FIREBASE_CREDENTIALS_BASE64 is set)
+// ── Option A: Admin SDK via service account (preferred when HEARUS_FIREBASE_CREDENTIALS_BASE64 is set)
 let adminVerify: ((token: string) => Promise<{ phone: string } | null>) | null = null
 
 async function getAdminVerifier() {
@@ -17,7 +17,7 @@ async function getAdminVerifier() {
     const admin = (await import('firebase-admin')).default
 
     const creds   = JSON.parse(Buffer.from(CREDS_B64, 'base64').toString('utf-8'))
-    const appName = 'relay-admin'
+    const appName = 'hearus-admin'
 
     const app = admin.apps.find(a => a?.name === appName)
       || admin.initializeApp({ credential: admin.credential.cert(creds) }, appName)

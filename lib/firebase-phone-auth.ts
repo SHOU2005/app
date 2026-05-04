@@ -1,12 +1,13 @@
 'use client'
 
-// relay-15824 Firebase project config (public client-side values)
+// hearus-4f2fe Firebase project config (public client-side values)
 const FIREBASE_CONFIG = {
-  apiKey:            'AIzaSyDA4N-yBgrNvPYXZP3MvbV81slAt3a5hCE',
-  authDomain:        'relay-15824.firebaseapp.com',
-  projectId:         'relay-15824',
-  messagingSenderId: '444335957190',
-  appId:             '1:444335957190:web:92c5b2f5b30a7ce16de3c7',
+  apiKey:            'AIzaSyCk1e3yCrlsn0V6qDa43OwTeLaYuNKX2sE',
+  authDomain:        'hearus-4f2fe.firebaseapp.com',
+  projectId:         'hearus-4f2fe',
+  storageBucket:     'hearus-4f2fe.appspot.com',
+  messagingSenderId: '616412616901',
+  appId:             '1:616412616901:web:5f83157adc3e01fd1478ac',
 }
 
 const APP_NAME = 'switchnow'
