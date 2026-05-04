@@ -1,8 +1,9 @@
 'use client'
 import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react'
+import { ArrowRight, CheckCircle } from 'lucide-react'
 import { useLanguage } from '../LanguageContext'
+import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
 
 const FONT = '"DM Sans", system-ui, sans-serif'
 
@@ -11,34 +12,43 @@ function RegisterForm() {
   const params = useSearchParams()
   const { t }  = useLanguage()
 
-  const [name,     setName]     = useState('')
-  const [phone,    setPhone]    = useState(params.get('phone') || '')
-  const [city,     setCity]     = useState('')
-  const [password, setPassword] = useState('')
-  const [confirm,  setConfirm]  = useState('')
-  const [showPass, setShowPass] = useState(false)
-  const [loading,  setLoading]  = useState(false)
-  const [error,    setError]    = useState('')
+  const [name,    setName]    = useState('')
+  const [phone,   setPhone]   = useState(params.get('phone') || '')
+  const [city,    setCity]    = useState('')
+  const [otp,     setOtp]     = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState('')
 
-  const passwordStrength = password.length === 0 ? 0 : password.length < 6 ? 1 : password.length < 10 ? 2 : 3
-  const strengthLabel = ['', t('weak'), t('good'), t('strong')]
-  const strengthColor = ['', '#EF4444', '#F59E0B', '#22C55E']
+  const phoneOk  = /^\d{10}$/.test(phone)
+  const otpOk    = /^\d{6}$/.test(otp)
+  const formOk   = name.trim().length > 1 && phoneOk
 
-  const canSubmit = name.trim().length > 1 && /^\d{10}$/.test(phone) && password.length >= 6 && password === confirm
-
-  async function register() {
-    if (!canSubmit || loading) return
+  async function handleSendOtp() {
+    if (!formOk || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/captain-register', {
+      await sendPhoneCode(phone)
+      setOtpSent(true)
+    } catch (e: any) {
+      setError(e.message || t('networkError'))
+    } finally { setLoading(false) }
+  }
+
+  async function handleVerify() {
+    if (!otpOk || loading) return
+    setLoading(true); setError('')
+    try {
+      const { idToken } = await confirmPhoneCode(otp)
+      const res = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, name: name.trim(), password, city: city.trim() }),
+        body: JSON.stringify({ idToken, role: 'CAPTAIN', name: name.trim(), territory: city.trim() || undefined }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || t('registerFailed')); return }
       router.replace('/captain')
-    } catch {
-      setError(t('networkError'))
+    } catch (e: any) {
+      setError(e.message || t('networkError'))
     } finally { setLoading(false) }
   }
 
@@ -73,84 +83,76 @@ function RegisterForm() {
         <p style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)', margin: '0 0 24px' }}>{t('fillDetails')}</p>
 
         {/* Full name */}
-        <Field label={t('fullName')}>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' as const, display: 'block', marginBottom: 8 }}>
+            {t('fullName')}
+          </label>
           <input
             type="text" placeholder={t('namePlaceholder')}
-            value={name} onChange={e => { setName(e.target.value); setError('') }}
-            style={inputStyle(!!name)}
+            value={name} disabled={otpSent}
+            onChange={e => { setName(e.target.value); setError('') }}
+            style={{ width: '100%', height: 54, borderRadius: 14, border: `1.5px solid ${name.trim().length > 1 ? '#111111' : 'rgba(0,0,0,0.12)'}`,
+              background: '#FAFAFA', outline: 'none', padding: '0 14px', fontSize: 16, fontWeight: 600,
+              color: '#111111', boxSizing: 'border-box' as const, transition: 'border-color 0.15s',
+              opacity: otpSent ? 0.6 : 1 }}
           />
-        </Field>
+        </div>
 
         {/* Phone */}
-        <Field label={t('mobileNumber')}>
-          <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${phone ? '#111111' : 'rgba(0,0,0,0.12)'}`, borderRadius: 14, background: '#FAFAFA', overflow: 'hidden', transition: 'border-color 0.15s' }}>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' as const, display: 'block', marginBottom: 8 }}>
+            {t('mobileNumber')}
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${phoneOk ? '#111111' : 'rgba(0,0,0,0.12)'}`, borderRadius: 14, background: '#FAFAFA', overflow: 'hidden', transition: 'border-color 0.15s', opacity: otpSent ? 0.6 : 1 }}>
             <div style={{ padding: '0 14px', borderRight: '1px solid rgba(0,0,0,0.08)', height: 54, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <span style={{ fontSize: 18 }}>🇮🇳</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#111111' }}>+91</span>
             </div>
             <input
               type="tel" inputMode="numeric" maxLength={10} placeholder={t('phonePlaceholder')}
-              value={phone} onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
+              value={phone} disabled={otpSent}
+              onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', padding: '0 14px', fontSize: 18, fontWeight: 700, color: '#111111', letterSpacing: 2, height: 54 }}
             />
           </div>
-        </Field>
+        </div>
 
         {/* City */}
-        <Field label={t('cityTerritory')}>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' as const, display: 'block', marginBottom: 8 }}>
+            {t('cityTerritory')}
+          </label>
           <input
             type="text" placeholder={t('cityPlaceholder')}
-            value={city} onChange={e => setCity(e.target.value)}
-            style={inputStyle(!!city)}
+            value={city} disabled={otpSent}
+            onChange={e => setCity(e.target.value)}
+            style={{ width: '100%', height: 54, borderRadius: 14, border: `1.5px solid ${city ? '#111111' : 'rgba(0,0,0,0.12)'}`,
+              background: '#FAFAFA', outline: 'none', padding: '0 14px', fontSize: 16, fontWeight: 600,
+              color: '#111111', boxSizing: 'border-box' as const, transition: 'border-color 0.15s',
+              opacity: otpSent ? 0.6 : 1 }}
           />
-        </Field>
+        </div>
 
-        {/* Password */}
-        <Field label={t('password')}>
-          <div style={{ position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${password ? '#111111' : 'rgba(0,0,0,0.12)'}`, borderRadius: 14, background: '#FAFAFA', overflow: 'hidden', transition: 'border-color 0.15s' }}>
+        {/* OTP entry */}
+        {otpSent && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#111111', letterSpacing: '0.06em', textTransform: 'uppercase' as const, display: 'block', marginBottom: 4 }}>
+              OTP sent to +91 {phone}
+            </label>
+            <p style={{ fontSize: 12, color: 'rgba(0,0,0,0.4)', marginBottom: 10 }}>Check your SMS inbox</p>
+            <div style={{ border: `1.5px solid ${otpOk ? '#111111' : 'rgba(0,0,0,0.12)'}`, borderRadius: 14, background: '#FAFAFA', overflow: 'hidden' }}>
               <input
-                type={showPass ? 'text' : 'password'} placeholder={t('minChars')}
-                value={password} onChange={e => { setPassword(e.target.value); setError('') }}
-                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', padding: '0 14px', fontSize: 16, fontWeight: 600, color: '#111111', height: 54 }}
+                type="tel" inputMode="numeric" maxLength={6} placeholder="6-digit OTP"
+                value={otp} autoFocus
+                onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError('') }}
+                onKeyDown={e => e.key === 'Enter' && handleVerify()}
+                style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none',
+                  padding: '0 16px', fontSize: 28, fontWeight: 800, color: '#111111', letterSpacing: 8, height: 64,
+                  boxSizing: 'border-box' as const }}
               />
-              <button onClick={() => setShowPass(s => !s)} style={{ padding: '0 14px', height: 54, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center' }}>
-                {showPass ? <EyeOff style={{ width: 18, height: 18 }} /> : <Eye style={{ width: 18, height: 18 }} />}
-              </button>
             </div>
-            {password.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <div style={{ flex: 1, height: 4, borderRadius: 2, background: '#F0F0F0', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${(passwordStrength / 3) * 100}%`, background: strengthColor[passwordStrength], transition: 'all 0.3s', borderRadius: 2 }} />
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: strengthColor[passwordStrength] }}>{strengthLabel[passwordStrength]}</span>
-              </div>
-            )}
           </div>
-        </Field>
-
-        {/* Confirm password */}
-        <Field label={t('confirmPassword')}>
-          <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${confirm ? (confirm === password ? '#22C55E' : '#EF4444') : 'rgba(0,0,0,0.12)'}`, borderRadius: 14, background: '#FAFAFA', overflow: 'hidden', transition: 'border-color 0.15s' }}>
-            <input
-              type={showPass ? 'text' : 'password'} placeholder={t('reenterPassword')}
-              value={confirm} onChange={e => { setConfirm(e.target.value); setError('') }}
-              onKeyDown={e => e.key === 'Enter' && register()}
-              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', padding: '0 14px', fontSize: 16, fontWeight: 600, color: '#111111', height: 54 }}
-            />
-            {confirm && (
-              <div style={{ padding: '0 14px', display: 'flex', alignItems: 'center' }}>
-                {confirm === password
-                  ? <CheckCircle style={{ width: 18, height: 18, color: '#22C55E' }} />
-                  : <span style={{ fontSize: 16, color: '#EF4444' }}>✕</span>
-                }
-              </div>
-            )}
-          </div>
-          {confirm && confirm !== password && (
-            <p style={{ fontSize: 12, color: '#EF4444', fontWeight: 600, marginTop: 4 }}>{t('passwordNoMatch')}</p>
-          )}
-        </Field>
+        )}
 
         {error && (
           <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
@@ -158,18 +160,36 @@ function RegisterForm() {
           </div>
         )}
 
-        <button onClick={register} disabled={!canSubmit || loading}
-          style={{
-            width: '100%', height: 56, borderRadius: 16, border: 'none',
-            background: canSubmit ? '#111111' : '#E5E5E5',
-            color: canSubmit ? '#FFFFFF' : 'rgba(0,0,0,0.25)',
-            fontSize: 16, fontWeight: 800, cursor: canSubmit ? 'pointer' : 'default',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            transition: 'all 0.2s', marginBottom: 20,
-            boxShadow: canSubmit ? '0 8px 24px rgba(0,0,0,0.18)' : 'none',
-          }}>
-          {loading ? <Spinner /> : <><span>{t('createAccount')}</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
-        </button>
+        {!otpSent ? (
+          <button onClick={handleSendOtp} disabled={!formOk || loading}
+            style={{ width: '100%', height: 56, borderRadius: 16, border: 'none',
+              background: formOk ? '#111111' : '#E5E5E5',
+              color: formOk ? '#FFFFFF' : 'rgba(0,0,0,0.25)',
+              fontSize: 16, fontWeight: 800, cursor: formOk ? 'pointer' : 'default',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              transition: 'all 0.2s', marginBottom: 20,
+              boxShadow: formOk ? '0 8px 24px rgba(0,0,0,0.18)' : 'none' }}>
+            {loading ? <Spinner /> : <><span>Send OTP</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
+          </button>
+        ) : (
+          <>
+            <button onClick={handleVerify} disabled={!otpOk || loading}
+              style={{ width: '100%', height: 56, borderRadius: 16, border: 'none',
+                background: otpOk ? '#111111' : '#E5E5E5',
+                color: otpOk ? '#FFFFFF' : 'rgba(0,0,0,0.25)',
+                fontSize: 16, fontWeight: 800, cursor: otpOk ? 'pointer' : 'default',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                transition: 'all 0.2s', marginBottom: 12,
+                boxShadow: otpOk ? '0 8px 24px rgba(0,0,0,0.18)' : 'none' }}>
+              {loading ? <Spinner /> : <><span>Verify & Create Account</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
+            </button>
+            <button onClick={() => { setOtpSent(false); setOtp(''); setError('') }}
+              style={{ width: '100%', height: 44, background: 'none', border: 'none', cursor: 'pointer',
+                color: 'rgba(0,0,0,0.4)', fontSize: 14, fontWeight: 600 }}>
+              ← Change number / Resend OTP
+            </button>
+          </>
+        )}
 
         <p style={{ textAlign: 'center', fontSize: 14, color: 'rgba(0,0,0,0.45)', margin: 0 }}>
           {t('alreadyRegistered')}{' '}
@@ -178,27 +198,6 @@ function RegisterForm() {
       </div>
     </div>
   )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
-        {label}
-      </label>
-      {children}
-    </div>
-  )
-}
-
-function inputStyle(filled: boolean): React.CSSProperties {
-  return {
-    width: '100%', height: 54, borderRadius: 14,
-    border: `1.5px solid ${filled ? '#111111' : 'rgba(0,0,0,0.12)'}`,
-    background: '#FAFAFA', outline: 'none',
-    padding: '0 14px', fontSize: 16, fontWeight: 600, color: '#111111',
-    transition: 'border-color 0.15s', boxSizing: 'border-box',
-  }
 }
 
 function Spinner() {

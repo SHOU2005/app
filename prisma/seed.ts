@@ -70,7 +70,7 @@ async function main() {
             rating:         w.rating,
             totalShifts:    w.shifts,
             totalEarnings:  w.shifts * 125 * 8,
-            skills:         JSON.stringify(w.skills),
+            skills:         w.skills,
             kycStatus:      'APPROVED',
             aadhaarVerified: true,
             videoVerified:  true,

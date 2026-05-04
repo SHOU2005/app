@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
+import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
 
 const BG   = '#000000'
 const CARD = '#0E0E0E'
@@ -11,28 +12,41 @@ const T3   = 'rgba(255,255,255,0.15)'
 
 export default function EmployerLoginPage() {
   const router  = useRouter()
-  const [phone,    setPhone]    = useState('')
-  const [password, setPassword] = useState('')
-  const [showPass, setShowPass] = useState(false)
-  const [error,    setError]    = useState('')
-  const [loading,  setLoading]  = useState(false)
+  const [phone,   setPhone]   = useState('')
+  const [otp,     setOtp]     = useState('')
+  const [stage,   setStage]   = useState<'phone' | 'otp'>('phone')
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState('')
 
-  const canSubmit = /^\d{10}$/.test(phone) && password.length >= 1
+  const phoneOk = /^\d{10}$/.test(phone)
+  const otpOk   = /^\d{6}$/.test(otp)
 
-  async function login() {
-    if (!canSubmit || loading) return
+  async function handleSendOtp() {
+    if (!phoneOk || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/login', {
+      await sendPhoneCode(phone)
+      setStage('otp')
+    } catch (e: any) {
+      setError(e.message || 'Failed to send OTP')
+    } finally { setLoading(false) }
+  }
+
+  async function handleVerify() {
+    if (!otpOk || loading) return
+    setLoading(true); setError('')
+    try {
+      const { idToken } = await confirmPhoneCode(otp)
+      const res = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password }),
+        body: JSON.stringify({ idToken, role: 'EMPLOYER' }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Invalid phone or password'); return }
-      if (data.user?.role !== 'EMPLOYER') { setError('This is not an employer account'); return }
+      if (!res.ok) { setError(data.error || 'Login failed'); return }
+      if (data.role !== 'EMPLOYER') { setError('This is not an employer account'); return }
       router.replace('/employer')
-    } catch {
-      setError('Network error. Try again.')
+    } catch (e: any) {
+      setError(e.message || 'Verification failed')
     } finally { setLoading(false) }
   }
 
@@ -57,55 +71,66 @@ export default function EmployerLoginPage() {
         border: '1px solid rgba(255,255,255,0.07)', padding: '28px 24px' }}>
 
         <p style={{ fontSize: 22, fontWeight: 900, color: T1, marginBottom: 6 }}>Welcome back</p>
-        <p style={{ fontSize: 14, color: T2, marginBottom: 24 }}>Sign in to your employer account</p>
+        <p style={{ fontSize: 14, color: T2, marginBottom: 24 }}>
+          {stage === 'phone' ? 'Enter your mobile number to sign in' : `OTP sent to +91 ${phone}`}
+        </p>
 
-        {/* Phone */}
-        <div style={{ display: 'flex', alignItems: 'center', borderRadius: 16,
-          border: `1.5px solid ${phone ? T1 : 'rgba(255,255,255,0.1)'}`,
-          background: '#161616', marginBottom: 12, overflow: 'hidden', transition: 'border-color 0.2s' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px',
-            borderRight: '1px solid rgba(255,255,255,0.08)', height: 58, flexShrink: 0 }}>
-            <span style={{ fontSize: 20 }}>🇮🇳</span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: T1 }}>+91</span>
-          </div>
-          <input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit number"
-            value={phone}
-            onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
-            onKeyDown={e => e.key === 'Enter' && document.getElementById('emp-pass')?.focus()}
-            style={{ flex: 1, background: 'transparent', outline: 'none', border: 'none',
-              padding: '0 16px', fontSize: 20, fontWeight: 700, color: T1, letterSpacing: 2, height: 58 }} />
-        </div>
-
-        {/* Password */}
-        <div style={{ display: 'flex', alignItems: 'center', borderRadius: 16,
-          border: `1.5px solid ${password ? T1 : 'rgba(255,255,255,0.1)'}`,
-          background: '#161616', marginBottom: 16, overflow: 'hidden', transition: 'border-color 0.2s' }}>
-          <input id="emp-pass" type={showPass ? 'text' : 'password'} placeholder="Password"
-            value={password}
-            onChange={e => { setPassword(e.target.value); setError('') }}
-            onKeyDown={e => e.key === 'Enter' && login()}
-            style={{ flex: 1, background: 'transparent', outline: 'none', border: 'none',
-              padding: '0 16px', fontSize: 16, fontWeight: 600, color: T1, height: 58 }} />
-          <button onClick={() => setShowPass(s => !s)}
-            style={{ padding: '0 14px', height: 58, background: 'none', border: 'none', cursor: 'pointer',
-              color: T2, display: 'flex', alignItems: 'center' }}>
-            {showPass ? <EyeOff style={{ width: 18, height: 18 }} /> : <Eye style={{ width: 18, height: 18 }} />}
-          </button>
-        </div>
-
-        {error && <p style={{ fontSize: 13, color: '#EF4444', marginBottom: 12, fontWeight: 600 }}>{error}</p>}
-
-        <button onClick={login} disabled={!canSubmit || loading}
-          style={{ width: '100%', height: 56, borderRadius: 16, border: 'none',
-            background: canSubmit ? T1 : '#1E1E1E',
-            color: canSubmit ? '#000' : T3,
-            fontSize: 16, fontWeight: 800, cursor: canSubmit ? 'pointer' : 'default',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            transition: 'all 0.2s', boxShadow: canSubmit ? '0 8px 32px rgba(255,255,255,0.12)' : 'none' }}>
-          {loading
-            ? <><Spinner /><span>Signing in…</span></>
-            : <><span>Sign In</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
-        </button>
+        {stage === 'phone' ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', borderRadius: 16,
+              border: `1.5px solid ${phoneOk ? T1 : 'rgba(255,255,255,0.1)'}`,
+              background: '#161616', marginBottom: 16, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px',
+                borderRight: '1px solid rgba(255,255,255,0.08)', height: 58, flexShrink: 0 }}>
+                <span style={{ fontSize: 20 }}>🇮🇳</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: T1 }}>+91</span>
+              </div>
+              <input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit number"
+                value={phone}
+                onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
+                onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
+                style={{ flex: 1, background: 'transparent', outline: 'none', border: 'none',
+                  padding: '0 16px', fontSize: 20, fontWeight: 700, color: T1, letterSpacing: 2, height: 58 }} />
+            </div>
+            {error && <p style={{ fontSize: 13, color: '#EF4444', marginBottom: 12, fontWeight: 600 }}>{error}</p>}
+            <button onClick={handleSendOtp} disabled={!phoneOk || loading}
+              style={{ width: '100%', height: 56, borderRadius: 16, border: 'none',
+                background: phoneOk ? T1 : '#1E1E1E', color: phoneOk ? '#000' : T3,
+                fontSize: 16, fontWeight: 800, cursor: phoneOk ? 'pointer' : 'default',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                transition: 'all 0.2s', boxShadow: phoneOk ? '0 8px 32px rgba(255,255,255,0.12)' : 'none' }}>
+              {loading ? <><Spinner /><span>Sending…</span></> : <><span>Send OTP</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ borderRadius: 16, border: `1.5px solid ${otpOk ? T1 : 'rgba(255,255,255,0.1)'}`,
+              background: '#161616', marginBottom: 16, overflow: 'hidden' }}>
+              <input type="tel" inputMode="numeric" maxLength={6} placeholder="6-digit OTP"
+                value={otp} autoFocus
+                onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError('') }}
+                onKeyDown={e => e.key === 'Enter' && handleVerify()}
+                style={{ width: '100%', background: 'transparent', outline: 'none', border: 'none',
+                  padding: '0 18px', fontSize: 28, fontWeight: 800, color: T1, letterSpacing: 8, height: 64,
+                  boxSizing: 'border-box' }} />
+            </div>
+            {error && <p style={{ fontSize: 13, color: '#EF4444', marginBottom: 12, fontWeight: 600 }}>{error}</p>}
+            <button onClick={handleVerify} disabled={!otpOk || loading}
+              style={{ width: '100%', height: 56, borderRadius: 16, border: 'none',
+                background: otpOk ? T1 : '#1E1E1E', color: otpOk ? '#000' : T3,
+                fontSize: 16, fontWeight: 800, cursor: otpOk ? 'pointer' : 'default',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                transition: 'all 0.2s', marginBottom: 10,
+                boxShadow: otpOk ? '0 8px 32px rgba(255,255,255,0.12)' : 'none' }}>
+              {loading ? <><Spinner /><span>Verifying…</span></> : <><span>Verify & Sign In</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
+            </button>
+            <button onClick={() => { setStage('phone'); setOtp(''); setError('') }}
+              style={{ width: '100%', height: 40, background: 'none', border: 'none', cursor: 'pointer',
+                color: T2, fontSize: 14, fontWeight: 600 }}>
+              ← Change number
+            </button>
+          </>
+        )}
       </div>
 
       <p style={{ marginTop: 24, fontSize: 14, color: T2 }}>

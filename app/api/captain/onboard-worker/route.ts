@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     data: {
       userId:            user.id,
       city:              city || '',
-      skills:            JSON.stringify(skills || []),
+      skills:            Array.isArray(skills) ? skills : [],
       captainReferralId: captain.id,
     },
   })

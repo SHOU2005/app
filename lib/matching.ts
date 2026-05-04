@@ -1,8 +1,5 @@
 import { prisma } from './prisma'
 
-function parseSkills(s: string | null): string[] {
-  try { return JSON.parse(s || '[]') } catch { return [] }
-}
 
 export function haversineDistance(
   lat1: number, lng1: number,
@@ -82,7 +79,7 @@ export async function findMatchingWorkers(
       rating: w.rating,
       totalShifts: w.totalShifts,
       distance: Math.round(distance * 10) / 10,
-      skills: parseSkills(w.skills),
+      skills: w.skills,
       city: w.city,
       score,
     }

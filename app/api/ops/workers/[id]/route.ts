@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server'
 import { getTokenFromCookies } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-function parseSkills(s: string | null): string[] {
-  try { return JSON.parse(s || '[]') } catch { return [] }
-}
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const token = getTokenFromCookies()
@@ -26,5 +23,5 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   })
 
   if (!worker) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json({ worker: { ...worker, skills: parseSkills(worker.skills) } })
+  return NextResponse.json({ worker })
 }

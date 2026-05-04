@@ -9,7 +9,7 @@ export async function GET() {
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
+    where:   { id: payload.userId },
     include: { employerProfile: true },
   })
   if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -24,29 +24,33 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { name, companyName, businessType, address, city, gstNumber } = body
+  const { name, ownerName, companyName, businessType, address, city, gstNumber, logo } = body
 
-  const [user, profile] = await Promise.all([
-    name ? prisma.user.update({ where: { id: payload.userId }, data: { name } }) : Promise.resolve(null),
+  await Promise.all([
+    name ? prisma.user.update({ where: { id: payload.userId }, data: { name } }) : null,
     prisma.employerProfile.upsert({
       where:  { userId: payload.userId },
       create: {
         userId: payload.userId,
-        ...(companyName   ? { companyName }   : {}),
-        ...(businessType  ? { businessType }  : {}),
-        ...(address       ? { address }       : {}),
-        ...(city          ? { city }          : {}),
-        ...(gstNumber     ? { gstNumber }     : {}),
+        ...(ownerName    != null ? { ownerName }    : {}),
+        ...(companyName  != null ? { companyName }  : {}),
+        ...(businessType != null ? { businessType } : {}),
+        ...(address      != null ? { address }      : {}),
+        ...(city         != null ? { city }         : {}),
+        ...(gstNumber    != null ? { gstNumber }    : {}),
+        ...(logo         != null ? { logo }         : {}),
       },
       update: {
-        ...(companyName   ? { companyName }   : {}),
-        ...(businessType  ? { businessType }  : {}),
-        ...(address       ? { address }       : {}),
-        ...(city          ? { city }          : {}),
-        ...(gstNumber     ? { gstNumber }     : {}),
+        ...(ownerName    != null ? { ownerName }    : {}),
+        ...(companyName  != null ? { companyName }  : {}),
+        ...(businessType != null ? { businessType } : {}),
+        ...(address      != null ? { address }      : {}),
+        ...(city         != null ? { city }         : {}),
+        ...(gstNumber    != null ? { gstNumber }    : {}),
+        ...(logo         != null ? { logo }         : {}),
       },
     }),
   ])
 
-  return NextResponse.json({ success: true, profile })
+  return NextResponse.json({ success: true })
 }
