@@ -7,6 +7,7 @@ import {
   Check, ChevronLeft, Upload, Shield, Sparkles, CheckCircle, Zap,
 } from 'lucide-react'
 import { useLang, type Lang } from '@/lib/lang'
+import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
 
 /* ── Job types with real photos ── */
 const JOB_TYPES = [
@@ -135,12 +136,7 @@ function RegisterPageInner() {
     if (phone.length < 10) return
     setLoading(true); setOtpError('')
     try {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setOtpError(data.error || 'Failed to send OTP'); setLoading(false); return }
+      await sendPhoneCode(phone)
       setOtpPhase('otp'); setTimeout(() => otpRefs[0].current?.focus(), 200)
     } catch (e: any) { setOtpError(e?.message || 'Failed to send OTP') }
     setLoading(false)
@@ -151,13 +147,14 @@ function RegisterPageInner() {
     if (code.length < 6) return
     setLoading(true); setOtpError('')
     try {
-      const res = await fetch('/api/auth/verify-otp', {
+      const { idToken } = await confirmPhoneCode(code)
+      const res = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp: code, role: 'WORKER', referralCode: referralCode || undefined }),
+        body: JSON.stringify({ idToken, role: 'WORKER', referralCode: referralCode || undefined }),
       })
       if (res.ok) { localStorage.setItem('sw_role', 'worker'); go(2) }
       else { const d = await res.json(); setOtpError(d.error || 'Invalid OTP'); setOtp(['','','','','','']); setTimeout(() => otpRefs[0].current?.focus(), 50) }
-    } catch (e: any) { setOtpError(e?.message || 'Server unavailable. Try again.') }
+    } catch (e: any) { setOtpError(e?.message || 'Verification failed. Try again.'); setOtp(['','','','','','']) }
     setLoading(false)
   }
 

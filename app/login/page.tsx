@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, ChevronLeft, Star, Zap, IndianRupee } from 'lucide-react'
+import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -23,16 +24,7 @@ export default function LoginPage() {
     if (!phoneValid || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, mode: 'login' }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        if (data.notRegistered) { router.push(`/register?phone=${encodeURIComponent(phone)}`); return }
-        setError(data.error || 'Failed to send OTP. Try again.')
-        return
-      }
+      await sendPhoneCode(phone)
       setPhase('otp')
       startResendTimer()
     } catch (e: any) {
@@ -44,12 +36,13 @@ export default function LoginPage() {
     if (otp.length < 6 || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/verify-otp', {
+      const { idToken } = await confirmPhoneCode(otp)
+      const res = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp, role: 'WORKER' }),
+        body: JSON.stringify({ idToken, role: 'WORKER' }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Invalid OTP'); setOtp(''); return }
+      if (!res.ok) { setError(data.error || 'Verification failed'); setOtp(''); return }
       localStorage.setItem('sw_role', (data.role as string).toLowerCase())
       router.push('/')
     } catch (e: any) {
