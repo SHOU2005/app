@@ -28,8 +28,21 @@ async function ensureRecaptcha(auth: ReturnType<typeof getAuth>) {
   if (_rcReady) return
   try {
     await initializeRecaptchaConfig(auth)
-  } catch {}
+  } catch (e) {
+    console.warn('[Firebase] initializeRecaptchaConfig failed:', e)
+  }
   _rcReady = true
+}
+
+// Persistent container — never removed, reCAPTCHA keeps its DOM reference valid
+function getContainer(): HTMLElement {
+  const existing = document.getElementById('sw-rc-root')
+  if (existing) return existing
+  const el = document.createElement('div')
+  el.id = 'sw-rc-root'
+  el.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;z-index:-1;opacity:0'
+  document.body.appendChild(el)
+  return el
 }
 
 let verifier: RecaptchaVerifier | null = null
@@ -39,23 +52,14 @@ function clearVerifier() {
     try { verifier.clear() } catch {}
     verifier = null
   }
-  const old = document.getElementById('sw-rc-root')
-  if (old) old.remove()
-}
-
-function createContainer(): HTMLElement {
-  const el = document.createElement('div')
-  el.id = 'sw-rc-root'
-  el.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;overflow:hidden;z-index:-1'
-  document.body.appendChild(el)
-  return el
 }
 
 export async function sendPhoneCode(phoneDigits: string): Promise<string> {
   const auth = getFirebaseAuth()
   await ensureRecaptcha(auth)
   clearVerifier()
-  const container = createContainer()
+
+  const container = getContainer()
 
   verifier = new RecaptchaVerifier(auth, container, {
     size: 'invisible',
@@ -70,7 +74,7 @@ export async function sendPhoneCode(phoneDigits: string): Promise<string> {
     return 'sent'
   } catch (err: any) {
     clearVerifier()
-    _rcReady = false // reset so next attempt re-fetches config
+    _rcReady = false
     const msg: Record<string, string> = {
       'auth/billing-not-enabled':    'Firebase billing not enabled.',
       'auth/invalid-phone-number':   'Invalid phone number.',
