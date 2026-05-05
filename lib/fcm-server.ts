@@ -116,7 +116,12 @@ export async function notifyPaymentReceived(workerId: string, amount: number) {
   })
 }
 
-export async function broadcastUrgentJob(shiftId: string, title: string, location: string): Promise<void> {
+export async function broadcastUrgentJob(
+  shiftId: string,
+  title:   string,
+  location: string,
+  pay?: string,
+): Promise<void> {
   const workers = await prisma.workerProfile.findMany({
     where:   { isAvailable: true, kycStatus: 'APPROVED' },
     include: { user: { select: { id: true, fcmToken: true } } },
@@ -127,7 +132,13 @@ export async function broadcastUrgentJob(shiftId: string, title: string, locatio
       title: `⚡ Urgent Job — ${title}`,
       body:  `${location} · First to accept gets the job!`,
       url:   `/worker/jobs?urgent=${shiftId}`,
-      data:  { type: 'URGENT_JOB', shiftId },
+      data:  {
+        type:     'URGENT_JOB',
+        shiftId,
+        title,
+        location,
+        ...(pay ? { pay } : {}),
+      },
     }).catch(console.error)
   ))
 }

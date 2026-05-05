@@ -1,8 +1,9 @@
 'use client'
 import { useRef, useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowRight, Check, ChevronLeft, Upload } from 'lucide-react'
+import { ArrowRight, Check, ChevronLeft, Upload, Camera } from 'lucide-react'
 import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
+import { compressImage } from '@/lib/compress-image'
 
 const JOB_TYPES = [
   { id: 'shop',         emoji: '🏪', label: 'Shop Helper'     },
@@ -19,33 +20,38 @@ const JOB_TYPES = [
   { id: 'electrician',  emoji: '⚡', label: 'Electrician'     },
 ]
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload  = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
-function PhotoPicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function PhotoPicker({ label, value, onChange, selfie = false, required = false }: { label: string; value: string; onChange: (v: string) => void; selfie?: boolean; required?: boolean }) {
   const ref = useRef<HTMLInputElement>(null)
+  const [loading, setLoading] = useState(false)
   return (
     <div style={{ marginBottom: 16 }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: 'rgba(0,0,0,0.5)', marginBottom: 8 }}>{label}</p>
+      <p style={{ fontSize: 13, fontWeight: 700, color: 'rgba(0,0,0,0.5)', marginBottom: 8 }}>
+        {label} {required && <span style={{ color: '#DC2626' }}>*</span>}
+      </p>
       <button onClick={() => ref.current?.click()}
-        style={{ width: '100%', height: value ? 'auto' : 80, borderRadius: 14,
-          border: `2px dashed ${value ? '#22C55E' : 'rgba(0,0,0,0.15)'}`,
-          background: value ? 'rgba(34,197,94,0.04)' : '#F9F9F9',
+        style={{ width: '100%', height: value ? 'auto' : 100, borderRadius: 16,
+          border: `2px dashed ${value ? '#22C55E' : required ? 'rgba(220,38,38,0.3)' : 'rgba(0,0,0,0.15)'}`,
+          background: value ? 'rgba(34,197,94,0.04)' : required ? 'rgba(220,38,38,0.02)' : '#F9F9F9',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: 6, cursor: 'pointer', overflow: 'hidden', padding: 0 }}>
-        {value
-          ? <img src={value} alt={label} style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 12 }} />
-          : <><Upload style={{ width: 22, height: 22, color: 'rgba(0,0,0,0.3)' }} /><span style={{ fontSize: 13, color: 'rgba(0,0,0,0.4)', fontWeight: 600 }}>Tap to upload</span></>
+          gap: 8, cursor: 'pointer', overflow: 'hidden', padding: 0, transition: 'all 0.15s' }}>
+        {loading
+          ? <div style={{ width: 24, height: 24, borderRadius: '50%', border: '2.5px solid rgba(0,0,0,0.1)', borderTopColor: '#111', animation: 'spin 0.7s linear infinite' }} />
+          : value
+            ? <img src={value} alt={label} style={{ width: '100%', maxHeight: 200, objectFit: 'cover' }} />
+            : <>
+                <Camera style={{ width: 26, height: 26, color: required ? 'rgba(220,38,38,0.5)' : 'rgba(0,0,0,0.3)' }} />
+                <span style={{ fontSize: 13, color: required ? 'rgba(220,38,38,0.6)' : 'rgba(0,0,0,0.4)', fontWeight: 600 }}>Tap to take or upload</span>
+              </>
         }
       </button>
-      <input ref={ref} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-        onChange={async e => { const f = e.target.files?.[0]; if (f) onChange(await fileToBase64(f)) }} />
+      <input ref={ref} type="file" accept="image/*" capture={selfie ? 'user' : 'environment'} style={{ display: 'none' }}
+        onChange={async e => {
+          const f = e.target.files?.[0]
+          if (!f) return
+          setLoading(true)
+          try { onChange(await compressImage(f, 200, 600)) } catch {}
+          setLoading(false)
+        }} />
     </div>
   )
 }
@@ -83,7 +89,7 @@ function RegisterForm() {
   const step1Ok = name.trim().length >= 2 && phoneOk && city.trim().length > 0
 
   const TOTAL_STEPS = 4
-  const stepLabel = ['Your Info', 'Work Types', 'Profile Photo & ID Front', 'ID Back & Complete']
+  const stepLabel = ['Your Info', 'Work Types', 'Your Photo & Aadhaar', 'Aadhaar Back & Done']
 
   async function handleSendOtp() {
     if (!step1Ok || loading) return
@@ -119,6 +125,7 @@ function RegisterForm() {
   }
 
   async function handleStep3Next() {
+    if (!profilePhoto) { setError('Profile photo is required'); return }
     if (!aadhaarFront) { setError('Please upload your Aadhaar front photo'); return }
     setStep(4); setError('')
   }
@@ -336,10 +343,10 @@ function RegisterForm() {
         {/* STEP 3 */}
         {step === 3 && (
           <div>
-            <p style={{ fontSize: 26, fontWeight: 900, color: '#111111', marginBottom: 4 }}>Upload your photos</p>
-            <p style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)', marginBottom: 24 }}>Profile photo is optional. Aadhaar front is required for KYC.</p>
-            <PhotoPicker label="Profile Photo (optional)" value={profilePhoto} onChange={setProfilePhoto} />
-            <PhotoPicker label="Aadhaar Card Front *" value={aadhaarFront} onChange={setAadhaarFront} />
+            <p style={{ fontSize: 26, fontWeight: 900, color: '#111111', marginBottom: 4 }}>Your Photos</p>
+            <p style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)', marginBottom: 24 }}>Both photos are required to complete your profile.</p>
+            <PhotoPicker label="Profile Selfie" value={profilePhoto} onChange={setProfilePhoto} selfie required />
+            <PhotoPicker label="Aadhaar Card Front" value={aadhaarFront} onChange={setAadhaarFront} required />
             {error && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
               <p style={{ fontSize: 13, fontWeight: 600, color: '#DC2626', margin: 0 }}>{error}</p>
             </div>}

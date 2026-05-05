@@ -1,9 +1,10 @@
 'use client'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowRight, CheckCircle } from 'lucide-react'
+import { ArrowRight, CheckCircle, Camera, User } from 'lucide-react'
 import { useLanguage } from '../LanguageContext'
 import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
+import { compressImage } from '@/lib/compress-image'
 
 const FONT = '"DM Sans", system-ui, sans-serif'
 
@@ -12,14 +13,18 @@ function RegisterForm() {
   const params = useSearchParams()
   const { t }  = useLanguage()
 
-  const [name,    setName]    = useState('')
-  const [phone,   setPhone]   = useState(params.get('phone') || '')
-  const [city,    setCity]    = useState('')
-  const [otp,     setOtp]     = useState('')
+  const [step,      setStep]      = useState(1) // 1=info+OTP, 2=profile photo
+  const [name,      setName]      = useState('')
+  const [phone,     setPhone]     = useState(params.get('phone') || '')
+  const [city,      setCity]      = useState('')
+  const [otp,       setOtp]       = useState('')
   const [otpSent,   setOtpSent]   = useState(false)
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
   const [countdown, setCountdown] = useState(0)
+  const [photo,     setPhoto]     = useState('')
+  const [photoLoading, setPhotoLoading] = useState(false)
+  const photoRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (countdown <= 0) return
@@ -53,8 +58,32 @@ function RegisterForm() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || t('registerFailed')); return }
-      router.replace('/captain')
+      setStep(2) // go to photo step
     } catch (e: any) { setError(e.message) }
+    finally { setLoading(false) }
+  }
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoLoading(true)
+    try {
+      const compressed = await compressImage(file, 200, 600)
+      setPhoto(compressed)
+    } catch { setError('Failed to process photo') }
+    setPhotoLoading(false)
+  }
+
+  async function handleComplete() {
+    if (!photo) { setError('Profile photo is required'); return }
+    setLoading(true); setError('')
+    try {
+      await fetch('/api/captain/profile', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatar: photo }),
+      })
+      router.replace('/captain')
+    } catch { setError('Failed to save photo') }
     finally { setLoading(false) }
   }
 
@@ -64,6 +93,60 @@ function RegisterForm() {
     if (clean.length === 6) setTimeout(() => document.getElementById('capreg-verify-btn')?.click(), 80)
   }
 
+  // ── Step 2: Profile Photo ──────────────────────────────────
+  if (step === 2) return (
+    <div style={{ fontFamily: FONT, minHeight: '100vh', background: '#111111', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+      <div style={{ width: '100%', maxWidth: 380 }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 16, background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <span style={{ fontSize: 28, fontWeight: 900, color: '#111111' }}>S</span>
+          </div>
+          <h2 style={{ fontSize: 26, fontWeight: 900, color: '#FFFFFF', margin: '0 0 8px' }}>Add Your Photo</h2>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', margin: 0 }}>Your photo helps employers and workers recognise you</p>
+        </div>
+
+        {/* Photo picker */}
+        <button onClick={() => photoRef.current?.click()}
+          style={{ width: '100%', height: 200, borderRadius: 24, background: photo ? 'transparent' : 'rgba(255,255,255,0.06)', border: `2px dashed ${photo ? '#22C55E' : 'rgba(255,255,255,0.2)'}`, cursor: 'pointer', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 24, position: 'relative' }}>
+          {photoLoading ? (
+            <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', animation: 'spin 0.7s linear infinite' }} />
+          ) : photo ? (
+            <img src={photo} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Camera style={{ width: 28, height: 28, color: 'rgba(255,255,255,0.4)' }} />
+              </div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.5)', margin: 0 }}>Tap to take or upload photo</p>
+            </>
+          )}
+          {photo && (
+            <div style={{ position: 'absolute', bottom: 12, right: 12, background: '#22C55E', borderRadius: 20, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <CheckCircle style={{ width: 14, height: 14, color: '#FFFFFF' }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#FFFFFF' }}>Photo added</span>
+            </div>
+          )}
+        </button>
+        <input ref={photoRef} type="file" accept="image/*" capture="user" style={{ display: 'none' }} onChange={handlePhotoChange} />
+
+        {error && (
+          <div style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#FCA5A5', margin: 0 }}>{error}</p>
+          </div>
+        )}
+
+        <button onClick={handleComplete} disabled={!photo || loading}
+          style={{ width: '100%', height: 56, borderRadius: 16, border: 'none', background: photo ? '#FFFFFF' : 'rgba(255,255,255,0.15)', color: photo ? '#111111' : 'rgba(255,255,255,0.3)', fontSize: 16, fontWeight: 800, cursor: photo ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
+          {loading ? <Spinner white={false} /> : <><span>Continue to Dashboard</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
+        </button>
+
+        <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.25)', margin: 0 }}>Photo is required to activate your captain account</p>
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
+
+  // ── Step 1: Info + OTP ────────────────────────────────────
   return (
     <div style={{ fontFamily: FONT, minHeight: '100vh', background: '#F8F8F8', display: 'flex', flexDirection: 'column' }}>
 
@@ -79,8 +162,7 @@ function RegisterForm() {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
           {[t('onboardWorkers'), t('buildTerritory'), t('dailyCommissions')].map(txt => (
-            <div key={txt} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8,
-              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div key={txt} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <CheckCircle style={{ width: 11, height: 11, color: '#22C55E' }} />
               <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>{txt}</span>
             </div>
@@ -88,31 +170,23 @@ function RegisterForm() {
         </div>
       </div>
 
-      <div style={{ flex: 1, background: '#FFFFFF', borderRadius: '24px 24px 0 0', marginTop: -16,
-        padding: '28px 24px', paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}>
+      <div style={{ flex: 1, background: '#FFFFFF', borderRadius: '24px 24px 0 0', marginTop: -16, padding: '28px 24px', paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}>
 
         <h2 style={{ fontSize: 22, fontWeight: 900, color: '#111111', margin: '0 0 6px' }}>{t('createYourAccount')}</h2>
         <p style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)', margin: '0 0 24px' }}>{t('fillDetails')}</p>
 
         {/* Name */}
         <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>
-            {t('fullName')}
-          </label>
+          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>{t('fullName')}</label>
           <input type="text" placeholder={t('namePlaceholder')} value={name} disabled={otpSent}
             onChange={e => { setName(e.target.value); setError('') }}
-            style={{ width: '100%', height: 54, borderRadius: 14, border: `1.5px solid ${name.trim().length > 1 ? '#111111' : 'rgba(0,0,0,0.12)'}`,
-              background: '#FAFAFA', outline: 'none', padding: '0 14px', fontSize: 16, fontWeight: 600,
-              color: '#111111', boxSizing: 'border-box' as const, opacity: otpSent ? 0.6 : 1 }} />
+            style={{ width: '100%', height: 54, borderRadius: 14, border: `1.5px solid ${name.trim().length > 1 ? '#111111' : 'rgba(0,0,0,0.12)'}`, background: '#FAFAFA', outline: 'none', padding: '0 14px', fontSize: 16, fontWeight: 600, color: '#111111', boxSizing: 'border-box' as const, opacity: otpSent ? 0.6 : 1 }} />
         </div>
 
         {/* Phone */}
         <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>
-            {t('mobileNumber')}
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${phoneOk ? '#111111' : 'rgba(0,0,0,0.12)'}`,
-            borderRadius: 14, background: '#FAFAFA', overflow: 'hidden', opacity: otpSent ? 0.6 : 1 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>{t('mobileNumber')}</label>
+          <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${phoneOk ? '#111111' : 'rgba(0,0,0,0.12)'}`, borderRadius: 14, background: '#FAFAFA', overflow: 'hidden', opacity: otpSent ? 0.6 : 1 }}>
             <div style={{ padding: '0 14px', borderRight: '1px solid rgba(0,0,0,0.08)', height: 54, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <span style={{ fontSize: 18 }}>🇮🇳</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#111111' }}>+91</span>
@@ -126,30 +200,21 @@ function RegisterForm() {
 
         {/* City */}
         <div style={{ marginBottom: 20 }}>
-          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>
-            {t('cityTerritoryLabel')} *
-          </label>
+          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>{t('cityTerritoryLabel')} *</label>
           <input type="text" placeholder={t('cityPlaceholder')} value={city} disabled={otpSent}
             onChange={e => setCity(e.target.value)}
-            style={{ width: '100%', height: 54, borderRadius: 14, border: `1.5px solid ${city ? '#111111' : 'rgba(0,0,0,0.12)'}`,
-              background: '#FAFAFA', outline: 'none', padding: '0 14px', fontSize: 16, fontWeight: 600,
-              color: '#111111', boxSizing: 'border-box' as const, opacity: otpSent ? 0.6 : 1 }} />
+            style={{ width: '100%', height: 54, borderRadius: 14, border: `1.5px solid ${city ? '#111111' : 'rgba(0,0,0,0.12)'}`, background: '#FAFAFA', outline: 'none', padding: '0 14px', fontSize: 16, fontWeight: 600, color: '#111111', boxSizing: 'border-box' as const, opacity: otpSent ? 0.6 : 1 }} />
         </div>
 
-        {/* OTP entry */}
+        {/* OTP */}
         {otpSent && (
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#111111', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>
-              OTP sent to +91 {phone}
-            </label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#111111', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>OTP sent to +91 {phone}</label>
             <p style={{ fontSize: 12, color: 'rgba(0,0,0,0.4)', marginBottom: 10 }}>Check your SMS inbox</p>
             <div style={{ border: `1.5px solid ${otpOk ? '#111111' : 'rgba(0,0,0,0.12)'}`, borderRadius: 14, background: '#FAFAFA', overflow: 'hidden' }}>
-              <input type="tel" inputMode="numeric" maxLength={6} placeholder="_ _ _ _ _ _" autoFocus
-                value={otp}
+              <input type="tel" inputMode="numeric" maxLength={6} placeholder="_ _ _ _ _ _" autoFocus value={otp}
                 onChange={e => handleOtpChange(e.target.value)}
-                style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none',
-                  padding: '0 20px', fontSize: 32, fontWeight: 800, color: '#111111', letterSpacing: 12, height: 68,
-                  boxSizing: 'border-box' as const }} />
+                style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', padding: '0 20px', fontSize: 32, fontWeight: 800, color: '#111111', letterSpacing: 12, height: 68, boxSizing: 'border-box' as const }} />
             </div>
           </div>
         )}
@@ -162,30 +227,17 @@ function RegisterForm() {
 
         {!otpSent ? (
           <button onClick={handleSendOtp} disabled={!formOk || loading}
-            style={{ width: '100%', height: 56, borderRadius: 16, border: 'none',
-              background: formOk ? '#111111' : '#E5E5E5', color: formOk ? '#FFFFFF' : 'rgba(0,0,0,0.25)',
-              fontSize: 16, fontWeight: 800, cursor: formOk ? 'pointer' : 'default',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              transition: 'all 0.2s', marginBottom: 20,
-              boxShadow: formOk ? '0 8px 24px rgba(0,0,0,0.18)' : 'none' }}>
+            style={{ width: '100%', height: 56, borderRadius: 16, border: 'none', background: formOk ? '#111111' : '#E5E5E5', color: formOk ? '#FFFFFF' : 'rgba(0,0,0,0.25)', fontSize: 16, fontWeight: 800, cursor: formOk ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s', marginBottom: 20, boxShadow: formOk ? '0 8px 24px rgba(0,0,0,0.18)' : 'none' }}>
             {loading ? <Spinner /> : <><span>Send OTP</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
           </button>
         ) : (
           <>
             <button id="capreg-verify-btn" onClick={handleVerify} disabled={!otpOk || loading}
-              style={{ width: '100%', height: 56, borderRadius: 16, border: 'none',
-                background: otpOk ? '#111111' : '#E5E5E5', color: otpOk ? '#FFFFFF' : 'rgba(0,0,0,0.25)',
-                fontSize: 16, fontWeight: 800, cursor: otpOk ? 'pointer' : 'default',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                transition: 'all 0.2s', marginBottom: 12,
-                boxShadow: otpOk ? '0 8px 24px rgba(0,0,0,0.18)' : 'none' }}>
-              {loading ? <Spinner /> : <><span>Verify & Create Account</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
+              style={{ width: '100%', height: 56, borderRadius: 16, border: 'none', background: otpOk ? '#111111' : '#E5E5E5', color: otpOk ? '#FFFFFF' : 'rgba(0,0,0,0.25)', fontSize: 16, fontWeight: 800, cursor: otpOk ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s', marginBottom: 12, boxShadow: otpOk ? '0 8px 24px rgba(0,0,0,0.18)' : 'none' }}>
+              {loading ? <Spinner /> : <><span>Verify & Continue</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
             </button>
-            <button onClick={() => { if (countdown > 0) return; setOtpSent(false); setOtp(''); setError('') }}
-              disabled={countdown > 0}
-              style={{ width: '100%', height: 44, background: 'none', border: 'none',
-                cursor: countdown > 0 ? 'default' : 'pointer',
-                color: countdown > 0 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.4)', fontSize: 14, fontWeight: 600 }}>
+            <button onClick={() => { if (countdown > 0) return; setOtpSent(false); setOtp(''); setError('') }} disabled={countdown > 0}
+              style={{ width: '100%', height: 44, background: 'none', border: 'none', cursor: countdown > 0 ? 'default' : 'pointer', color: countdown > 0 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.4)', fontSize: 14, fontWeight: 600 }}>
               {countdown > 0 ? `Resend OTP in ${countdown}s` : '← Change number / Resend OTP'}
             </button>
           </>
@@ -196,13 +248,14 @@ function RegisterForm() {
           <a href="/captain/login" style={{ color: '#111111', fontWeight: 800, textDecoration: 'none' }}>{t('signIn')} →</a>
         </p>
       </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 }
 
-function Spinner() {
+function Spinner({ white = true }: { white?: boolean }) {
   return (
-    <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', animation: 'spin 0.7s linear infinite' }}>
+    <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2.5px solid ${white ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)'}`, borderTopColor: white ? '#fff' : '#111', animation: 'spin 0.7s linear infinite' }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )

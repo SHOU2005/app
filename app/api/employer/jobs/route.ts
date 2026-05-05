@@ -71,7 +71,12 @@ export async function POST(req: NextRequest) {
   })
 
   if (isInstant) {
-    broadcastUrgentJob(shift.id, shift.title, shift.address).catch(console.error)
+    broadcastUrgentJob(
+      shift.id,
+      shift.title,
+      shift.address,
+      `₹${workerEarning.toLocaleString('en-IN')} total`,
+    ).catch(console.error)
   }
 
   return NextResponse.json({

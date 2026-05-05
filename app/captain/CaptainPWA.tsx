@@ -13,9 +13,40 @@ export default function CaptainPWA() {
       navigator.serviceWorker.register('/captain-sw.js', { scope: '/captain/' }).catch(() => {})
     }
 
+    // Continuously send location every 60 seconds
+    let watchId: number | null = null
+    let intervalId: ReturnType<typeof setInterval> | null = null
+
+    function sendLocation(lat: number, lng: number) {
+      fetch('/api/captain/location', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ lat, lng }),
+      }).catch(() => {})
+    }
+
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        p => sendLocation(p.coords.latitude, p.coords.longitude),
+        () => {}
+      )
+      watchId = navigator.geolocation.watchPosition(
+        p => sendLocation(p.coords.latitude, p.coords.longitude),
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      )
+      // Also force-refresh every 60s in case watchPosition goes quiet
+      intervalId = setInterval(() => {
+        navigator.geolocation.getCurrentPosition(
+          p => sendLocation(p.coords.latitude, p.coords.longitude),
+          () => {}
+        )
+      }, 60000)
+    }
+
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setInstalled(true)
-      return
+      // Don't return early — let location tracking keep running
     }
 
     const dismissed = sessionStorage.getItem('captain_pwa_dismissed')
@@ -30,7 +61,11 @@ export default function CaptainPWA() {
     window.addEventListener('beforeinstallprompt', handler as any)
     window.addEventListener('appinstalled', () => { setInstalled(true); setShow(false) })
 
-    return () => window.removeEventListener('beforeinstallprompt', handler as any)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler as any)
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId)
+      if (intervalId !== null) clearInterval(intervalId)
+    }
   }, [])
 
   async function install() {
