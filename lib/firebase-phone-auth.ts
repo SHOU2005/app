@@ -40,7 +40,7 @@ function getContainer(): HTMLElement {
   if (existing) return existing
   const el = document.createElement('div')
   el.id = 'sw-rc-root'
-  el.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999'
+  el.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;z-index:-1;opacity:0'
   document.body.appendChild(el)
   return el
 }
@@ -62,10 +62,8 @@ export async function sendPhoneCode(phoneDigits: string): Promise<string> {
   const container = getContainer()
 
   verifier = new RecaptchaVerifier(auth, container, {
-    size: 'normal',  // visible checkbox — reliable fallback until Enterprise key is Score-based
-    callback: async () => {
-      // reCAPTCHA solved — trigger phone number verification
-    },
+    size: 'invisible',
+    callback: () => {},
     'expired-callback': () => { clearVerifier() },
   })
 
