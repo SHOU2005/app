@@ -2,7 +2,6 @@
 import { useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, Check, ChevronLeft, Camera, Upload } from 'lucide-react'
-import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
 
 const JOB_TYPES = [
   { id: 'shop',         emoji: '🏪', label: 'Shop Helper'      },
@@ -96,7 +95,12 @@ function RegisterForm() {
     if (!step1Ok || loading) return
     setLoading(true); setError('')
     try {
-      await sendPhoneCode(phone)
+      const res = await fetch('/api/auth/send-whatsapp-otp', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Failed to send OTP'); return }
       setOtpSent(true)
     } catch (e: any) {
       setError(e.message || 'Failed to send OTP')
@@ -107,10 +111,9 @@ function RegisterForm() {
     if (!otpOk || loading) return
     setLoading(true); setError('')
     try {
-      const { idToken } = await confirmPhoneCode(otp)
-      const res = await fetch('/api/auth/firebase-verify', {
+      const res = await fetch('/api/auth/verify-whatsapp-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, role: 'WORKER', name: name.trim(), city: city.trim(), referralCode: referral || undefined }),
+        body: JSON.stringify({ phone, otp, role: 'WORKER', name: name.trim(), city: city.trim(), referralCode: referral || undefined }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Registration failed'); return }
@@ -159,7 +162,7 @@ function RegisterForm() {
         }),
       })
 
-      router.replace('/')
+      router.replace('/worker/dashboard')
     } catch (e: any) {
       setError(e.message || 'Failed to save profile')
     } finally { setLoading(false) }
@@ -437,7 +440,7 @@ function RegisterForm() {
                 method: 'PATCH', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ skills: Array.from(jobs), profilePhoto: profilePhoto || undefined }),
               })
-              router.replace('/')
+              router.replace('/worker/dashboard')
             }}
               style={{ width: '100%', height: 44, background: 'none', border: 'none', cursor: 'pointer',
                 color: 'rgba(0,0,0,0.35)', fontSize: 14, fontWeight: 600 }}>

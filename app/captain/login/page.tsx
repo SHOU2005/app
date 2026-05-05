@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, MapPin, TrendingUp, Users } from 'lucide-react'
 import { useLanguage } from '../LanguageContext'
-import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
 
 const FONT = '"DM Sans", system-ui, sans-serif'
 
@@ -24,7 +23,12 @@ export default function CaptainLoginPage() {
     if (!phoneOk || loading) return
     setLoading(true); setError('')
     try {
-      await sendPhoneCode(phone)
+      const res = await fetch('/api/auth/send-whatsapp-otp', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || t('networkError')); return }
       setStage('otp')
     } catch (e: any) {
       setError(e.message || t('networkError'))
@@ -35,10 +39,9 @@ export default function CaptainLoginPage() {
     if (!otpOk || loading) return
     setLoading(true); setError('')
     try {
-      const { idToken } = await confirmPhoneCode(otp)
-      const res = await fetch('/api/auth/firebase-verify', {
+      const res = await fetch('/api/auth/verify-whatsapp-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, role: 'CAPTAIN' }),
+        body: JSON.stringify({ phone, otp, role: 'CAPTAIN' }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || t('loginFailed')); return }

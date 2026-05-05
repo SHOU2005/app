@@ -2,7 +2,6 @@
 import { useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, Upload } from 'lucide-react'
-import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
 
 const BRAND = '#111827'
 
@@ -85,7 +84,12 @@ function RegisterInner() {
     if (!step1Ok || loading) return
     setLoading(true); setError('')
     try {
-      await sendPhoneCode(phone)
+      const res = await fetch('/api/auth/send-whatsapp-otp', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Failed to send OTP'); return }
       setOtpSent(true)
     } catch (e: any) {
       setError(e.message || 'Failed to send OTP')
@@ -96,13 +100,12 @@ function RegisterInner() {
     if (!otpOk || loading) return
     setLoading(true); setError('')
     try {
-      const { idToken } = await confirmPhoneCode(otp)
-      const res = await fetch('/api/auth/firebase-verify', {
+      const res = await fetch('/api/auth/verify-whatsapp-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          idToken, role: 'EMPLOYER',
+          phone, otp, role: 'EMPLOYER',
           name: ownerName.trim(), city: city.trim(),
-          companyName: bizName.trim(), ownerName: ownerName.trim(),
+          companyName: bizName.trim(),
           referralCode: referralCode || undefined,
         }),
       })

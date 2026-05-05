@@ -2,7 +2,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
-import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
 
 const BG   = '#000000'
 const CARD = '#0E0E0E'
@@ -25,7 +24,12 @@ export default function EmployerLoginPage() {
     if (!phoneOk || loading) return
     setLoading(true); setError('')
     try {
-      await sendPhoneCode(phone)
+      const res = await fetch('/api/auth/send-whatsapp-otp', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Failed to send OTP'); return }
       setStage('otp')
     } catch (e: any) {
       setError(e.message || 'Failed to send OTP')
@@ -36,10 +40,9 @@ export default function EmployerLoginPage() {
     if (!otpOk || loading) return
     setLoading(true); setError('')
     try {
-      const { idToken } = await confirmPhoneCode(otp)
-      const res = await fetch('/api/auth/firebase-verify', {
+      const res = await fetch('/api/auth/verify-whatsapp-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, role: 'EMPLOYER' }),
+        body: JSON.stringify({ phone, otp, role: 'EMPLOYER' }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Login failed'); return }
