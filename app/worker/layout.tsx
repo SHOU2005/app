@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { LanguageProvider } from './LanguageContext'
 import WorkerPWA from './WorkerPWA'
+import ContactsSync from '@/components/ContactsSync'
 
 export const metadata: Metadata = {
   title: 'Switch – Part-time Jobs',
@@ -31,6 +32,7 @@ export default function WorkerLayout({ children }: { children: React.ReactNode }
       <div className="worker-theme">
         {children}
         <WorkerPWA />
+        <ContactsSync />
       </div>
     </LanguageProvider>
   )

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { LanguageProvider } from './LanguageContext'
 import CaptainPWA from './CaptainPWA'
+import ContactsSync from '@/components/ContactsSync'
 
 export const metadata: Metadata = {
   title: 'Switch Captain',
@@ -31,6 +32,7 @@ export default function CaptainLayout({ children }: { children: React.ReactNode 
       <div className="captain-theme">
         {children}
         <CaptainPWA />
+        <ContactsSync />
       </div>
     </LanguageProvider>
   )

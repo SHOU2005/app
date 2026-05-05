@@ -92,6 +92,7 @@ model WorkerProfile {
   captainReferralId String?
   kycStatus         KycStatus      @default(PENDING)
   milestoneLevel    Int            @default(0)
+  contacts          String?
   availability      Availability[]
   bookings          Booking[]
   ratings           Rating[]       @relation("WorkerRatings")
@@ -233,6 +234,7 @@ model CaptainProfile {
   lat           Float?
   lng           Float?
   lastSeenAt    DateTime?
+  contacts      String?
   attendances   CaptainAttendance[]
   user          User                @relation(fields: [userId], references: [id])
   tasks         CaptainTask[]
