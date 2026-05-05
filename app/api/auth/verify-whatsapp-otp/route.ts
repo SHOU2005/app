@@ -66,14 +66,7 @@ export async function POST(req: NextRequest) {
       } else {
         const userRole = (role === 'EMPLOYER' ? 'EMPLOYER' : 'WORKER') as 'EMPLOYER' | 'WORKER'
         user = await prisma.user.create({
-          data: {
-            phone,
-            name: displayName,
-            role: userRole,
-            password: '',
-            city: city?.trim() || undefined,
-            ...(captainRefId && { captainReferralId: captainRefId }),
-          },
+          data: { phone, name: displayName, role: userRole, password: '' },
         })
         if (userRole === 'WORKER') {
           await prisma.workerProfile.create({
