@@ -27,7 +27,7 @@ function RegisterForm() {
     if (!formOk || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/send-whatsapp-otp', {
+      const res = await fetch('/api/auth/send-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
       })
@@ -43,9 +43,9 @@ function RegisterForm() {
     if (!otpOk || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/verify-whatsapp-otp', {
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp, role: 'CAPTAIN', name: name.trim(), territory: city.trim() }),
+        body: JSON.stringify({ phone, otp, role: 'CAPTAIN', name: name.trim() }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || t('registerFailed')); return }

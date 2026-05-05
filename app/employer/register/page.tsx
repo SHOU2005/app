@@ -84,7 +84,7 @@ function RegisterInner() {
     if (!step1Ok || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/send-whatsapp-otp', {
+      const res = await fetch('/api/auth/send-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
       })
@@ -100,12 +100,11 @@ function RegisterInner() {
     if (!otpOk || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/verify-whatsapp-otp', {
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone, otp, role: 'EMPLOYER',
           name: ownerName.trim(), city: city.trim(),
-          companyName: bizName.trim(),
           referralCode: referralCode || undefined,
         }),
       })

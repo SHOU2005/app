@@ -23,9 +23,9 @@ export default function CaptainLoginPage() {
     if (!phoneOk || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/send-whatsapp-otp', {
+      const res = await fetch('/api/auth/send-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone, mode: 'login' }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || t('networkError')); return }
@@ -39,7 +39,7 @@ export default function CaptainLoginPage() {
     if (!otpOk || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/verify-whatsapp-otp', {
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, otp, role: 'CAPTAIN' }),
       })
