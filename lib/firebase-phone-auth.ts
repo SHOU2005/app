@@ -1,7 +1,7 @@
 'use client'
 
 import { initializeApp, getApps } from 'firebase/app'
-import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth'
+import { getAuth, signInWithPhoneNumber, RecaptchaVerifier, initializeRecaptchaConfig } from 'firebase/auth'
 
 const FIREBASE_CONFIG = {
   apiKey:            'AIzaSyCk1e3yCrlsn0V6qDa43OwTeLaYuNKX2sE',
@@ -15,12 +15,21 @@ const FIREBASE_CONFIG = {
 const APP_NAME = 'switchnow'
 
 let _auth: ReturnType<typeof getAuth> | null = null
+let _rcReady = false
 
 function getFirebaseAuth() {
   if (_auth) return _auth
   const app = getApps().find(a => a.name === APP_NAME) ?? initializeApp(FIREBASE_CONFIG, APP_NAME)
   _auth = getAuth(app)
   return _auth
+}
+
+async function ensureRecaptcha(auth: ReturnType<typeof getAuth>) {
+  if (_rcReady) return
+  try {
+    await initializeRecaptchaConfig(auth)
+  } catch {}
+  _rcReady = true
 }
 
 let verifier: RecaptchaVerifier | null = null
@@ -37,13 +46,14 @@ function clearVerifier() {
 function createContainer(): HTMLElement {
   const el = document.createElement('div')
   el.id = 'sw-rc-root'
-  el.style.cssText = 'position:fixed;bottom:0;right:0;width:0;height:0;overflow:hidden;z-index:-1'
+  el.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;overflow:hidden;z-index:-1'
   document.body.appendChild(el)
   return el
 }
 
 export async function sendPhoneCode(phoneDigits: string): Promise<string> {
   const auth = getFirebaseAuth()
+  await ensureRecaptcha(auth)
   clearVerifier()
   const container = createContainer()
 
@@ -60,12 +70,13 @@ export async function sendPhoneCode(phoneDigits: string): Promise<string> {
     return 'sent'
   } catch (err: any) {
     clearVerifier()
+    _rcReady = false // reset so next attempt re-fetches config
     const msg: Record<string, string> = {
-      'auth/billing-not-enabled':  'Firebase billing not enabled. Enable in Google Cloud Console.',
-      'auth/invalid-phone-number': 'Invalid phone number.',
-      'auth/too-many-requests':    'Too many attempts. Please wait and try again.',
-      'auth/captcha-check-failed': 'reCAPTCHA check failed. Reload and try again.',
-      'auth/invalid-app-credential': 'App credential error. Please reload and try again.',
+      'auth/billing-not-enabled':    'Firebase billing not enabled.',
+      'auth/invalid-phone-number':   'Invalid phone number.',
+      'auth/too-many-requests':      'Too many attempts. Please wait and try again.',
+      'auth/captcha-check-failed':   'reCAPTCHA check failed. Reload and try again.',
+      'auth/invalid-app-credential': 'reCAPTCHA failed. Reload and try again.',
     }
     throw new Error(msg[err?.code] ?? err?.message ?? 'Failed to send OTP')
   }
