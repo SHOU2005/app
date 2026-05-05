@@ -29,18 +29,18 @@ async function ensureRecaptcha(auth: ReturnType<typeof getAuth>) {
   try {
     await initializeRecaptchaConfig(auth)
   } catch (e) {
-    console.warn('[Firebase] initializeRecaptchaConfig failed:', e)
+    console.warn('[Firebase] initializeRecaptchaConfig:', e)
   }
   _rcReady = true
 }
 
-// Persistent container — never removed, reCAPTCHA keeps its DOM reference valid
+// Persistent container — never removed from DOM
 function getContainer(): HTMLElement {
   const existing = document.getElementById('sw-rc-root')
   if (existing) return existing
   const el = document.createElement('div')
   el.id = 'sw-rc-root'
-  el.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;z-index:-1;opacity:0'
+  el.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999'
   document.body.appendChild(el)
   return el
 }
@@ -62,15 +62,21 @@ export async function sendPhoneCode(phoneDigits: string): Promise<string> {
   const container = getContainer()
 
   verifier = new RecaptchaVerifier(auth, container, {
-    size: 'invisible',
-    callback: () => {},
+    size: 'normal',  // visible checkbox — reliable fallback until Enterprise key is Score-based
+    callback: async () => {
+      // reCAPTCHA solved — trigger phone number verification
+    },
     'expired-callback': () => { clearVerifier() },
   })
 
   try {
-    await verifier.render()
+    const widgetId = await verifier.render()
+    console.log('[Firebase] reCAPTCHA rendered, widgetId:', widgetId)
     const result = await signInWithPhoneNumber(auth, `+91${phoneDigits}`, verifier)
     ;(window as any).__fbConfirm = result
+    // Hide the widget after success
+    const el = document.getElementById('sw-rc-root')
+    if (el) el.style.display = 'none'
     return 'sent'
   } catch (err: any) {
     clearVerifier()
@@ -95,6 +101,9 @@ export async function confirmPhoneCode(code: string): Promise<{ idToken: string;
     const phone: string   = (credential.user.phoneNumber || '').replace(/^\+91/, '')
     ;(window as any).__fbConfirm = null
     clearVerifier()
+    // Restore container visibility for next use
+    const el = document.getElementById('sw-rc-root')
+    if (el) el.style.display = ''
     return { idToken, phone }
   } catch (err: any) {
     const msg: Record<string, string> = {
