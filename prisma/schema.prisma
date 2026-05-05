@@ -153,6 +153,7 @@ model Booking {
   checkInTime     DateTime?
   checkOutTime    DateTime?
   notes           String?
+  appliedAt       DateTime?     @default(now())
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   status          BookingStatus @default(PENDING)
@@ -165,6 +166,7 @@ model Booking {
   rating          Rating?
 
   @@index([shiftId])
+  @@index([shiftId, status])
   @@index([workerProfileId])
   @@index([employerId])
 }

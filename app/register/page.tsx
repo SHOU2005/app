@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useState, Suspense } from 'react'
+import { useRef, useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, Check, ChevronLeft, Upload } from 'lucide-react'
 import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
@@ -54,9 +54,16 @@ function RegisterForm() {
   const router  = useRouter()
   const params  = useSearchParams()
 
-  const [step,    setStep]    = useState(1)
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState('')
+  const [step,      setStep]      = useState(1)
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState('')
+  const [countdown, setCountdown] = useState(0)
+
+  useEffect(() => {
+    if (countdown <= 0) return
+    const id = setTimeout(() => setCountdown(c => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [countdown])
 
   const [name,     setName]     = useState('')
   const [phone,    setPhone]    = useState(params?.get('phone') ?? '')
@@ -84,6 +91,7 @@ function RegisterForm() {
     try {
       await sendPhoneCode(phone)
       setOtpSent(true)
+      setCountdown(60)
     } catch (e: any) { setError(e.message) }
     finally { setLoading(false) }
   }
@@ -270,9 +278,12 @@ function RegisterForm() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: otpOk ? 'pointer' : 'default', marginBottom: 10 }}>
                   {loading ? <><SSpinner /><span>Verifying…</span></> : <><span>Verify & Continue</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
                 </button>
-                <button onClick={() => { setOtpSent(false); setOtp(''); setError('') }}
-                  style={{ width: '100%', height: 44, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(0,0,0,0.4)', fontSize: 14, fontWeight: 600 }}>
-                  ← Change number / Resend OTP
+                <button onClick={() => { if (countdown > 0) return; setOtpSent(false); setOtp(''); setError('') }}
+                  disabled={countdown > 0}
+                  style={{ width: '100%', height: 44, background: 'none', border: 'none',
+                    cursor: countdown > 0 ? 'default' : 'pointer',
+                    color: countdown > 0 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.4)', fontSize: 14, fontWeight: 600 }}>
+                  {countdown > 0 ? `Resend OTP in ${countdown}s` : '← Change number / Resend OTP'}
                 </button>
               </>
             )}

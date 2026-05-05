@@ -122,13 +122,20 @@ export default function JobDetailPage() {
   const [worker,        setWorker]    = useState<any>(null)
   const [loading,       setLoading]   = useState(true)
   const [completing,    setCompleting] = useState(false)
+  const [confirming,    setConfirming] = useState<string | null>(null)
   const pollRef = useRef<any>(null)
 
   async function load() {
     try {
       const res  = await fetch(`/api/employer/jobs/${id}`)
       const data = await res.json()
-      if (data.job) { setJob(data.job); const b = data.job.bookings?.[0]; if (b?.worker) setWorker(b.worker) }
+      if (data.job) {
+        setJob(data.job)
+        const confirmed = data.job.bookings?.find((b: any) => ['CONFIRMED','IN_PROGRESS','COMPLETED'].includes(b.status))
+        const pending   = data.job.bookings?.find((b: any) => b.status === 'PENDING')
+        const b = confirmed || pending
+        if (b?.worker) setWorker(b.worker)
+      }
     } catch {}
     setLoading(false)
   }
@@ -138,6 +145,17 @@ export default function JobDetailPage() {
     pollRef.current = setInterval(load, 8000)
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [id])
+
+  async function confirmWorker(bookingId: string) {
+    setConfirming(bookingId)
+    try {
+      const res = await fetch(`/api/employer/bookings/${bookingId}`, { method: 'POST' })
+      if (res.ok) {
+        await load()
+        router.push(`/employer/job/${id}/payment`)
+      }
+    } finally { setConfirming(null) }
+  }
 
   async function completeJob() {
     setCompleting(true)
@@ -164,12 +182,15 @@ export default function JobDetailPage() {
 
   const statusIdx   = STATUS_STEPS.findIndex(s => s.key === job.status)
   const currentStep = STATUS_STEPS[statusIdx] || STATUS_STEPS[0]
+  const isOpen      = job.status === 'OPEN'
   const isSearching = job.status === 'SEARCHING'
   const isAssigned  = ['ASSIGNED', 'ON_THE_WAY', 'ARRIVED'].includes(job.status)
-  const isStarted   = job.status === 'STARTED'
+  const isStarted   = job.status === 'IN_PROGRESS'
   const isCompleted = job.status === 'COMPLETED'
   const workerName  = worker?.user?.name || 'Worker'
   const workerInit  = workerName[0]?.toUpperCase() || 'W'
+  const pendingBookings = job.bookings?.filter((b: any) => b.status === 'PENDING') || []
+  const confirmedBooking = job.bookings?.find((b: any) => ['CONFIRMED','IN_PROGRESS','COMPLETED'].includes(b.status))
 
   return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: FONT, color: T1 }}>
@@ -260,19 +281,47 @@ export default function JobDetailPage() {
           </div>
         </div>
 
-        {/* Searching state */}
-        {isSearching && (
+        {/* Open / Searching state */}
+        {(isOpen || isSearching) && pendingBookings.length === 0 && (
           <div style={{ background: S1, borderRadius: 20, padding: '24px', marginBottom: 12, textAlign: 'center', border: `1px solid ${BD}` }}>
             <div style={{ width: 56, height: 56, borderRadius: 28, background: S2, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', border: `1px solid ${BD}` }}>
               <div style={{ width: 14, height: 14, borderRadius: 7, background: GOLD, animation: 'livePulse 1s ease infinite' }} />
             </div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: T1, marginBottom: 6 }}>Finding best worker...</div>
-            <div style={{ fontSize: 13, color: T2 }}>Matching by distance, rating & availability</div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-              {['Verified', 'Trained', 'Reliable'].map(b => (
-                <div key={b} style={{ background: S2, borderRadius: 20, padding: '5px 12px', fontSize: 12, fontWeight: 700, color: T1, border: `1px solid ${BD}` }}>{b}</div>
-              ))}
+            <div style={{ fontSize: 17, fontWeight: 800, color: T1, marginBottom: 6 }}>
+              {job.isUrgent ? 'Waiting for workers to accept…' : 'Open for applications'}
             </div>
+            <div style={{ fontSize: 13, color: T2 }}>
+              {job.isUrgent ? 'Notifications sent to nearby workers' : 'Workers can apply — you pick who to confirm'}
+            </div>
+          </div>
+        )}
+
+        {/* Pending applicants (scheduled jobs) */}
+        {pendingBookings.length > 0 && !confirmedBooking && (
+          <div style={{ background: S1, borderRadius: 20, padding: 20, marginBottom: 12, border: `1px solid ${BD}` }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T3, marginBottom: 14, textTransform: 'uppercase' as const, letterSpacing: 0.5 }}>
+              {pendingBookings.length} Applicant{pendingBookings.length > 1 ? 's' : ''}
+            </div>
+            {pendingBookings.map((b: any) => {
+              const wName  = b.worker?.user?.name || 'Worker'
+              const wInit  = wName[0]?.toUpperCase() || 'W'
+              const rating = b.worker?.rating || 4.5
+              return (
+                <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 14, marginBottom: 14, borderBottom: `1px solid ${BD}` }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 24, background: S2, border: `1.5px solid ${T1}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T1, fontWeight: 900, fontSize: 18, flexShrink: 0 }}>{wInit}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: T1 }}>{wName}</div>
+                    <div style={{ fontSize: 12, color: GOLD, fontWeight: 700 }}>★ {rating.toFixed(1)}</div>
+                  </div>
+                  <button
+                    onClick={() => confirmWorker(b.id)}
+                    disabled={!!confirming}
+                    style={{ padding: '10px 20px', borderRadius: 12, background: T1, color: '#000', fontWeight: 800, fontSize: 14, border: 'none', cursor: confirming ? 'default' : 'pointer', opacity: confirming ? 0.7 : 1, fontFamily: FONT }}>
+                    {confirming === b.id ? 'Confirming…' : 'Confirm & Pay'}
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
 
@@ -338,6 +387,17 @@ export default function JobDetailPage() {
         </div>
 
         {/* Action buttons */}
+        {/* Urgent: worker accepted → employer must pay to confirm */}
+        {job.isUrgent && isAssigned && confirmedBooking?.status === 'PENDING' && (
+          <button onClick={() => router.push(`/employer/job/${id}/payment`)} style={{
+            width: '100%', padding: '18px 0', borderRadius: 16, border: 'none', cursor: 'pointer',
+            background: '#FFFFFF', color: '#000', fontWeight: 900, fontSize: 17, fontFamily: FONT,
+            marginBottom: 10,
+          }}>
+            Pay & Confirm Worker
+          </button>
+        )}
+
         {isStarted && (
           <button onClick={completeJob} disabled={completing} style={{
             width: '100%', padding: '18px 0', borderRadius: 16, border: 'none', cursor: 'pointer',

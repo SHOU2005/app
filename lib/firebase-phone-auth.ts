@@ -13,9 +13,16 @@ const FIREBASE_CONFIG = {
 }
 
 const CONTAINER_ID = 'sw-rc-root'
+const COOLDOWN_MS  = 60_000
 
 let _auth: ReturnType<typeof getAuth> | null = null
 let _verifier: RecaptchaVerifier | null = null
+let _lastSentAt = 0
+
+export function getOtpCooldown(): number {
+  const remaining = COOLDOWN_MS - (Date.now() - _lastSentAt)
+  return remaining > 0 ? Math.ceil(remaining / 1000) : 0
+}
 
 function getAuth_() {
   if (_auth) return _auth
@@ -70,11 +77,15 @@ const ERROR_MAP: Record<string, string> = {
 }
 
 export async function sendPhoneCode(phoneDigits: string): Promise<void> {
+  const cooldown = getOtpCooldown()
+  if (cooldown > 0) throw new Error(`Please wait ${cooldown}s before requesting another OTP.`)
+
   resetVerifier()
   _verifier = buildVerifier()
   try {
     const result = await signInWithPhoneNumber(getAuth_(), `+91${phoneDigits}`, _verifier)
     ;(window as any).__fbConfirm = result
+    _lastSentAt = Date.now()
   } catch (err: any) {
     resetVerifier()
     throw new Error(ERROR_MAP[err?.code] ?? err?.message ?? 'Failed to send OTP. Please try again.')

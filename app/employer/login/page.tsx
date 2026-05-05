@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
@@ -14,8 +14,15 @@ export default function EmployerLoginPage() {
   const [phone,   setPhone]   = useState('')
   const [otp,     setOtp]     = useState('')
   const [stage,   setStage]   = useState<'phone' | 'otp'>('phone')
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState('')
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState('')
+  const [countdown, setCountdown] = useState(0)
+
+  useEffect(() => {
+    if (countdown <= 0) return
+    const id = setTimeout(() => setCountdown(c => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [countdown])
 
   const phoneOk = /^\d{10}$/.test(phone)
   const otpOk   = /^\d{6}$/.test(otp)
@@ -26,6 +33,7 @@ export default function EmployerLoginPage() {
     try {
       await sendPhoneCode(phone)
       setStage('otp')
+      setCountdown(60)
     } catch (e: any) { setError(e.message) }
     finally { setLoading(false) }
   }
@@ -123,10 +131,12 @@ export default function EmployerLoginPage() {
                 boxShadow: otpOk ? '0 8px 32px rgba(255,255,255,0.12)' : 'none' }}>
               {loading ? <><Spinner /><span>Verifying…</span></> : <><span>Verify & Sign In</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
             </button>
-            <button onClick={() => { setStage('phone'); setOtp(''); setError('') }}
-              style={{ width: '100%', height: 40, background: 'none', border: 'none', cursor: 'pointer',
-                color: T2, fontSize: 14, fontWeight: 600 }}>
-              ← Change number / Resend OTP
+            <button onClick={() => { if (countdown > 0) return; setStage('phone'); setOtp(''); setError('') }}
+              disabled={countdown > 0}
+              style={{ width: '100%', height: 40, background: 'none', border: 'none',
+                cursor: countdown > 0 ? 'default' : 'pointer',
+                color: countdown > 0 ? 'rgba(255,255,255,0.2)' : T2, fontSize: 14, fontWeight: 600 }}>
+              {countdown > 0 ? `Resend OTP in ${countdown}s` : '← Change number / Resend OTP'}
             </button>
           </>
         )}

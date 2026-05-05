@@ -1,10 +1,10 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import {
   ArrowRight, Zap, MapPin, Clock,
   IndianRupee, ChevronRight, Bell, Briefcase,
-  TrendingUp, AlertTriangle,
+  TrendingUp, AlertTriangle, CheckCircle,
 } from 'lucide-react'
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils'
 import BottomNav from '@/components/shared/BottomNav'
@@ -133,32 +133,11 @@ export default function WorkerDashboard() {
 
         {/* Active shift card */}
         {active.length > 0 && (
-          <div
-            className="rounded-2xl p-4 animate-fade-up"
-            style={{ background: '#111111', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              <p className="text-[10px] font-bold tracking-wider" style={{ color: 'rgba(255,255,255,0.65)' }}>ACTIVE SHIFT</p>
-            </div>
-            {active.slice(0, 1).map((b: Record<string,unknown>) => {
-              const shift = b.shift as Record<string,unknown>
-              return (
-                <div key={b.id as string} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-black text-white text-base">{shift?.title as string}</p>
-                    <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                      {formatTime(shift?.startTime as string)} – {formatTime(shift?.endTime as string)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-black text-white">{formatCurrency(b.workerEarning as number)}</p>
-                    <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>your share</p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          <ActiveShiftCard booking={active[0]} onArrived={() => {
+            setBookings(bs => bs.map((b: Record<string,unknown>) =>
+              b.id === active[0].id ? { ...b, status: 'IN_PROGRESS' } : b
+            ))
+          }} />
         )}
 
         {/* Quick actions */}
@@ -295,6 +274,109 @@ function JobMiniCard({ job, idx = 0 }: { job: Record<string,unknown>; idx?: numb
         <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.35)' }}>you earn</p>
       </div>
     </Link>
+  )
+}
+
+function ActiveShiftCard({ booking, onArrived }: { booking: Record<string,unknown>; onArrived: () => void }) {
+  const shift      = booking.shift as Record<string,unknown>
+  const isActive   = booking.status === 'IN_PROGRESS'
+  const trackWidth = 280
+  const thumbW     = 56
+
+  const [pos,      setPos]      = useState(0)
+  const [sliding,  setSliding]  = useState(false)
+  const [done,     setDone]     = useState(isActive)
+  const [loading,  setLoading]  = useState(false)
+  const startX     = useRef(0)
+  const railRef    = useRef<HTMLDivElement>(null)
+
+  const onStart = useCallback((x: number) => { startX.current = x; setSliding(true) }, [])
+  const onMove  = useCallback((x: number) => {
+    if (!sliding) return
+    const max = trackWidth - thumbW - 4
+    setPos(Math.max(0, Math.min(max, x - startX.current)))
+  }, [sliding])
+  const onEnd   = useCallback(async () => {
+    if (!sliding) return
+    setSliding(false)
+    const max = trackWidth - thumbW - 4
+    if (pos >= max - 20) {
+      setDone(true)
+      setLoading(true)
+      await fetch('/api/worker/arrive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking.id }),
+      }).catch(console.error)
+      setLoading(false)
+      onArrived()
+    } else {
+      setPos(0)
+    }
+  }, [sliding, pos, booking.id, onArrived])
+
+  return (
+    <div className="rounded-2xl p-4 animate-fade-up" style={{ background: '#111111', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+        <p className="text-[10px] font-bold tracking-wider" style={{ color: 'rgba(255,255,255,0.65)' }}>
+          {done ? 'SHIFT IN PROGRESS' : 'CONFIRMED SHIFT'}
+        </p>
+      </div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="font-black text-white text-base">{shift?.title as string}</p>
+          <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>
+            {formatTime(shift?.startTime as string)} – {formatTime(shift?.endTime as string)}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xl font-black text-white">{formatCurrency(booking.workerEarning as number)}</p>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>your share</p>
+        </div>
+      </div>
+
+      {!done ? (
+        <div
+          ref={railRef}
+          style={{
+            position: 'relative', width: trackWidth, height: 60, borderRadius: 30,
+            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+            overflow: 'hidden', userSelect: 'none',
+          }}
+          onMouseDown={e => onStart(e.clientX - (railRef.current?.getBoundingClientRect().left || 0))}
+          onMouseMove={e => onMove(e.clientX - (railRef.current?.getBoundingClientRect().left || 0))}
+          onMouseUp={onEnd}
+          onMouseLeave={onEnd}
+          onTouchStart={e => onStart(e.touches[0].clientX - (railRef.current?.getBoundingClientRect().left || 0))}
+          onTouchMove={e => onMove(e.touches[0].clientX - (railRef.current?.getBoundingClientRect().left || 0))}
+          onTouchEnd={onEnd}
+        >
+          {/* Fill */}
+          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: pos + thumbW / 2, background: 'rgba(255,255,255,0.08)', transition: sliding ? 'none' : 'width 0.25s' }} />
+          {/* Label */}
+          <p style={{ position: 'absolute', right: 24, top: '50%', transform: 'translateY(-50%)', fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.4)', pointerEvents: 'none' }}>Slide to Arrive →</p>
+          {/* Thumb */}
+          <div style={{
+            position: 'absolute', left: pos + 2, top: 2, width: thumbW, height: thumbW, borderRadius: thumbW / 2,
+            background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+            transition: sliding ? 'none' : 'left 0.25s cubic-bezier(0.34,1.2,0.64,1)',
+            cursor: 'grab',
+          }}>
+            {loading
+              ? <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2.5px solid rgba(0,0,0,0.15)', borderTopColor: '#111', animation: 'spin 0.7s linear infinite' }} />
+              : <ArrowRight style={{ width: 22, height: 22, color: '#111111' }} />
+            }
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: 'rgba(34,197,94,0.1)', borderRadius: 14, border: '1px solid rgba(34,197,94,0.2)' }}>
+          <CheckCircle style={{ width: 18, height: 18, color: '#22C55E' }} />
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#22C55E', margin: 0 }}>Arrived at location — shift started!</p>
+        </div>
+      )}
+    </div>
   )
 }
 

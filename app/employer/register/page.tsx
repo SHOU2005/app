@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useState, Suspense } from 'react'
+import { useRef, useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, Upload } from 'lucide-react'
 import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
@@ -62,9 +62,16 @@ function RegisterInner() {
   const searchParams = useSearchParams()
   const logoRef      = useRef<HTMLInputElement>(null)
 
-  const [step,    setStep]    = useState(1)
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState('')
+  const [step,      setStep]      = useState(1)
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState('')
+  const [countdown, setCountdown] = useState(0)
+
+  useEffect(() => {
+    if (countdown <= 0) return
+    const id = setTimeout(() => setCountdown(c => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [countdown])
 
   // Step 1 fields
   const [bizName,      setBizName]      = useState('')
@@ -94,6 +101,7 @@ function RegisterInner() {
     try {
       await sendPhoneCode(phone)
       setOtpSent(true)
+      setCountdown(60)
     } catch (e: any) { setError(e.message) }
     finally { setLoading(false) }
   }
@@ -262,10 +270,12 @@ function RegisterInner() {
                     {loading ? <><Spinner /><span>Verifying…</span></> : <><span>Verify & Continue</span><ArrowRight style={{ width: 18, height: 18 }} /></>}
                   </button>
 
-                  <button onClick={() => { setOtpSent(false); setOtp(''); setError('') }}
-                    style={{ width: '100%', height: 44, background: 'none', border: 'none', cursor: 'pointer',
-                      color: '#9CA3AF', fontSize: 14, fontWeight: 600, fontFamily: 'inherit' }}>
-                    ← Change number / Resend OTP
+                  <button onClick={() => { if (countdown > 0) return; setOtpSent(false); setOtp(''); setError('') }}
+                    disabled={countdown > 0}
+                    style={{ width: '100%', height: 44, background: 'none', border: 'none',
+                      cursor: countdown > 0 ? 'default' : 'pointer',
+                      color: countdown > 0 ? '#D1D5DB' : '#9CA3AF', fontSize: 14, fontWeight: 600, fontFamily: 'inherit' }}>
+                    {countdown > 0 ? `Resend OTP in ${countdown}s` : '← Change number / Resend OTP'}
                   </button>
                 </>
               )}

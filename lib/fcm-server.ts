@@ -115,3 +115,28 @@ export async function notifyPaymentReceived(workerId: string, amount: number) {
     data:  { type: 'PAYMENT_RECEIVED' },
   })
 }
+
+export async function broadcastUrgentJob(shiftId: string, title: string, location: string): Promise<void> {
+  const workers = await prisma.workerProfile.findMany({
+    where:   { isAvailable: true, kycStatus: 'APPROVED' },
+    include: { user: { select: { id: true, fcmToken: true } } },
+  })
+
+  await Promise.all(workers.map(w =>
+    pushToUser(w.user.id, {
+      title: `⚡ Urgent Job — ${title}`,
+      body:  `${location} · First to accept gets the job!`,
+      url:   `/worker/jobs?urgent=${shiftId}`,
+      data:  { type: 'URGENT_JOB', shiftId },
+    }).catch(console.error)
+  ))
+}
+
+export async function notifyWorkerAccepted(employerId: string, workerName: string, jobTitle: string, jobId: string) {
+  await pushToUser(employerId, {
+    title: `${workerName} accepted your job`,
+    body:  `${jobTitle} · Tap to confirm and pay`,
+    url:   `/employer/job/${jobId}`,
+    data:  { type: 'WORKER_ACCEPTED', jobId },
+  })
+}
