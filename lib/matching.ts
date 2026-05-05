@@ -68,9 +68,9 @@ export async function findMatchingWorkers(
 
   const scored = workers.map((w) => {
     const distance = w.lat && w.lng
-      ? haversineDistance(shift.lat, shift.lng, w.lat, w.lng)
+      ? haversineDistance(shift.lat ?? 0, shift.lng ?? 0, w.lat, w.lng)
       : 999
-    const score = scoreWorker(w, shift.lat, shift.lng)
+    const score = scoreWorker(w, shift.lat ?? 0, shift.lng ?? 0)
     return {
       id: w.id,
       userId: w.userId,

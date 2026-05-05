@@ -48,7 +48,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   await prisma.otpLog.update({ where: { id: record.id }, data: { verified: true } })
 
   // Start the job
-  const shift = await prisma.shift.update({ where: { id: params.id }, data: { status: 'STARTED' } })
+  const shift = await prisma.shift.update({ where: { id: params.id }, data: { status: 'IN_PROGRESS' } })
   const bookings = await prisma.booking.findMany({
     where:   { shiftId: params.id, status: 'CONFIRMED' },
     include: { worker: { include: { user: true } } },

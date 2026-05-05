@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const payload = getTokenFromCookies()
   if (!payload || payload.role !== 'OPS') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const kycStatus = req.nextUrl.searchParams.get('kycStatus') || undefined
+  const kycStatus = (req.nextUrl.searchParams.get('kycStatus') || undefined) as 'PENDING' | 'APPROVED' | 'REJECTED' | undefined
   const city      = req.nextUrl.searchParams.get('city')      || undefined
   const page      = parseInt(req.nextUrl.searchParams.get('page') || '1')
   const limit     = 20
