@@ -130,6 +130,19 @@ const base = {
   earnings:      'Earnings',
   profile:       'Profile',
   notifications: 'Alerts',
+
+  // Active shift card
+  confirmedShift:  'CONFIRMED SHIFT',
+  shiftInProgress: 'SHIFT IN PROGRESS',
+  slideToArrive:   'Slide to Mark Arrived →',
+  getDirections:   'Get Directions',
+  arrivedBanner:   'Arrived! Enter OTP from employer to start',
+  enterJobOTP:     'Enter OTP from Employer',
+  otpPlaceholder4: '4-digit code',
+  verifyAndStart:  'Verify & Start Shift',
+  shiftStarted:    'Shift Started!',
+  verifyingOTP:    'Verifying…',
+  invalidOTP:      'Wrong OTP. Try again.',
 }
 
 type TKeys = typeof base
@@ -230,6 +243,17 @@ export const translations: Translations = {
     earnings:      'कमाई',
     profile:       'प्रोफ़ाइल',
     notifications: 'सूचनाएं',
+    confirmedShift:  'पुष्टि शिफ्ट',
+    shiftInProgress: 'शिफ्ट जारी है',
+    slideToArrive:   'पहुंचने के लिए स्लाइड करें →',
+    getDirections:   'रास्ता देखें',
+    arrivedBanner:   'पहुंच गए! शुरू करने के लिए OTP दर्ज करें',
+    enterJobOTP:     'नियोक्ता से OTP दर्ज करें',
+    otpPlaceholder4: '4 अंकों का कोड',
+    verifyAndStart:  'सत्यापित करें और शिफ्ट शुरू करें',
+    shiftStarted:    'शिफ्ट शुरू हो गई!',
+    verifyingOTP:    'सत्यापित हो रहा है…',
+    invalidOTP:      'गलत OTP। दोबारा प्रयास करें।',
   },
   mr: {
     ...base,

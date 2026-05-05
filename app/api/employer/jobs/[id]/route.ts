@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     include: {
       bookings: {
         include: { worker: { include: { user: { select: { name: true, phone: true, avatar: true } } } } },
-        take: 1,
+        orderBy: { createdAt: 'desc' as const },
       },
     },
   })

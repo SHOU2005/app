@@ -191,6 +191,10 @@ export default function JobDetailPage() {
   const workerInit  = workerName[0]?.toUpperCase() || 'W'
   const pendingBookings = job.bookings?.filter((b: any) => b.status === 'PENDING') || []
   const confirmedBooking = job.bookings?.find((b: any) => ['CONFIRMED','IN_PROGRESS','COMPLETED'].includes(b.status))
+  const workerArrived = !!(confirmedBooking?.checkInTime) && !isCompleted
+  // Compute virtual status: use ARRIVED step when worker has marked arrival but job not yet IN_PROGRESS
+  const virtualStatus = (workerArrived && job.status === 'ASSIGNED') ? 'ARRIVED' : job.status
+  const statusIdx2 = STATUS_STEPS.findIndex(s => s.key === virtualStatus)
 
   return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: FONT, color: T1 }}>
@@ -211,17 +215,17 @@ export default function JobDetailPage() {
           </button>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 17, fontWeight: 900, color: T1 }}>{job.title}</div>
-            <div style={{ fontSize: 12, color: T2, marginTop: 1 }}>{currentStep.label}</div>
+            <div style={{ fontSize: 12, color: T2, marginTop: 1 }}>{workerArrived ? 'Arrived' : currentStep.label}</div>
           </div>
           {!isCompleted && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: S1, padding: '6px 12px', borderRadius: 20, border: `1px solid ${BD}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: workerArrived ? 'rgba(16,185,129,0.12)' : S1, padding: '6px 12px', borderRadius: 20, border: `1px solid ${workerArrived ? 'rgba(16,185,129,0.3)' : BD}` }}>
               <div style={{
                 width: 6, height: 6, borderRadius: '50%',
-                background: isStarted ? '#10B981' : isSearching ? GOLD : '#60A5FA',
+                background: workerArrived ? '#10B981' : isStarted ? '#10B981' : isSearching ? GOLD : '#60A5FA',
                 animation: 'livePulse 1.5s ease infinite',
               }} />
-              <span style={{ fontSize: 12, color: T1, fontWeight: 600 }}>
-                {isSearching ? 'Searching' : isStarted ? 'Live' : 'Active'}
+              <span style={{ fontSize: 12, color: workerArrived ? '#10B981' : T1, fontWeight: 600 }}>
+                {workerArrived ? 'Worker Arrived!' : isSearching ? 'Searching' : isStarted ? 'Live' : 'Active'}
               </span>
             </div>
           )}
@@ -250,12 +254,23 @@ export default function JobDetailPage() {
 
       <div style={{ paddingTop: 'calc(62px + env(safe-area-inset-top) + 28vh)', padding: 'calc(62px + env(safe-area-inset-top) + 28vh) 16px 48px' }}>
 
+        {/* Worker arrived banner */}
+        {workerArrived && !isStarted && (
+          <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 16, padding: '14px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ fontSize: 26 }}>📍</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#10B981' }}>Worker has arrived!</div>
+              <div style={{ fontSize: 12, color: T2, marginTop: 2 }}>Generate an OTP below and share it to start the shift</div>
+            </div>
+          </div>
+        )}
+
         {/* Progress stepper */}
         <div style={{ background: S1, borderRadius: 18, padding: '14px 12px', marginBottom: 12, overflowX: 'auto', border: `1px solid ${BD}` }}>
           <div style={{ display: 'flex', alignItems: 'center', minWidth: 'max-content' }}>
             {STATUS_STEPS.map((s, i) => {
-              const done    = i < statusIdx
-              const current = i === statusIdx
+              const done    = i < statusIdx2
+              const current = i === statusIdx2
               return (
                 <div key={s.key} style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
@@ -354,10 +369,16 @@ export default function JobDetailPage() {
                 </a>
               )}
             </div>
-            {job.status === 'ON_THE_WAY' && (
+            {workerArrived && (
+              <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${BD}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#10B981', animation: 'livePulse 1.5s ease infinite' }} />
+                <span style={{ fontSize: 13, color: '#10B981', fontWeight: 700 }}>✓ Worker has arrived at your location</span>
+              </div>
+            )}
+            {!workerArrived && job.status === 'ON_THE_WAY' && (
               <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${BD}`, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#60A5FA', animation: 'livePulse 1.5s ease infinite' }} />
-                <span style={{ fontSize: 13, color: '#60A5FA', fontWeight: 600 }}>Worker is on the way · ETA ~15 min</span>
+                <span style={{ fontSize: 13, color: '#60A5FA', fontWeight: 600 }}>Worker is on the way</span>
               </div>
             )}
           </div>

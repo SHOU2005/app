@@ -45,22 +45,34 @@ export default function WorkerPWA() {
       if (!ctxRef.current || ctxRef.current.state === 'closed') {
         ctxRef.current = new AudioContext()
       }
-      const ctx  = ctxRef.current
-      const play = (freq: number, start: number, dur: number) => {
+      const ctx = ctxRef.current
+      const now = ctx.currentTime
+
+      // Rich stacked chime: sine + triangle for warmth, with reverb-like tail
+      const play = (freq: number, t: number, dur: number, vol = 0.6, type: OscillatorType = 'sine') => {
         const osc  = ctx.createOscillator()
         const gain = ctx.createGain()
         osc.connect(gain); gain.connect(ctx.destination)
-        osc.type = 'sine'
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + start)
-        gain.gain.setValueAtTime(0, ctx.currentTime + start)
-        gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + start + 0.02)
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur)
-        osc.start(ctx.currentTime + start)
-        osc.stop(ctx.currentTime + start + dur)
+        osc.type = type
+        osc.frequency.setValueAtTime(freq, now + t)
+        gain.gain.setValueAtTime(0, now + t)
+        gain.gain.linearRampToValueAtTime(vol, now + t + 0.015)
+        gain.gain.setValueAtTime(vol, now + t + dur * 0.4)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + t + dur)
+        osc.start(now + t)
+        osc.stop(now + t + dur + 0.05)
       }
-      play(880, 0,    0.18)
-      play(1100, 0.2, 0.18)
-      play(1320, 0.4, 0.25)
+
+      // First burst: urgent rising triad
+      play(659,  0.00, 0.20, 0.55)          // E5
+      play(659,  0.00, 0.20, 0.25, 'triangle')
+      play(880,  0.18, 0.20, 0.60)          // A5
+      play(1047, 0.36, 0.22, 0.65)          // C6
+      play(1319, 0.56, 0.28, 0.70)          // E6 — peak
+
+      // Short pause then repeat accent
+      play(1047, 0.92, 0.16, 0.50)          // C6 repeat
+      play(1319, 1.10, 0.30, 0.65)          // E6 final hold
     } catch { /* AudioContext not available */ }
   }
 
