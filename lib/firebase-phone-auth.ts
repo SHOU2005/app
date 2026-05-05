@@ -1,7 +1,7 @@
 'use client'
 
 import { initializeApp, getApps } from 'firebase/app'
-import { getAuth, signInWithPhoneNumber, RecaptchaVerifier, initializeRecaptchaConfig } from 'firebase/auth'
+import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth'
 
 const FIREBASE_CONFIG = {
   apiKey:            'AIzaSyCk1e3yCrlsn0V6qDa43OwTeLaYuNKX2sE',
@@ -12,102 +12,86 @@ const FIREBASE_CONFIG = {
   appId:             '1:616412616901:web:5f83157adc3e01fd1478ac',
 }
 
-const APP_NAME = 'switchnow'
+const CONTAINER_ID = 'sw-rc-root'
 
 let _auth: ReturnType<typeof getAuth> | null = null
-let _rcReady = false
+let _verifier: RecaptchaVerifier | null = null
 
-function getFirebaseAuth() {
+function getAuth_() {
   if (_auth) return _auth
-  const app = getApps().find(a => a.name === APP_NAME) ?? initializeApp(FIREBASE_CONFIG, APP_NAME)
+  const app = getApps().find(a => a.name === 'switchnow') ?? initializeApp(FIREBASE_CONFIG, 'switchnow')
   _auth = getAuth(app)
   return _auth
 }
 
-async function ensureRecaptcha(auth: ReturnType<typeof getAuth>) {
-  if (_rcReady) return
-  try {
-    await initializeRecaptchaConfig(auth)
-  } catch (e) {
-    console.warn('[Firebase] initializeRecaptchaConfig:', e)
-  }
-  _rcReady = true
-}
-
-// Persistent container — never removed from DOM
 function getContainer(): HTMLElement {
-  const existing = document.getElementById('sw-rc-root')
-  if (existing) return existing
-  const el = document.createElement('div')
-  el.id = 'sw-rc-root'
-  el.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;z-index:-1;opacity:0'
-  document.body.appendChild(el)
+  let el = document.getElementById(CONTAINER_ID)
+  if (!el) {
+    el = document.createElement('div')
+    el.id = CONTAINER_ID
+    el.style.cssText = 'position:fixed;bottom:0;right:0;z-index:-1;opacity:0;pointer-events:none;width:1px;height:1px'
+    document.body.appendChild(el)
+  }
   return el
 }
 
-let verifier: RecaptchaVerifier | null = null
-
-function clearVerifier() {
-  if (verifier) {
-    try { verifier.clear() } catch {}
-    verifier = null
+function resetVerifier() {
+  if (_verifier) {
+    try { _verifier.clear() } catch {}
+    _verifier = null
   }
+  // Clear inner html so reCAPTCHA can re-render fresh
+  const el = document.getElementById(CONTAINER_ID)
+  if (el) el.innerHTML = ''
 }
 
-export async function sendPhoneCode(phoneDigits: string): Promise<string> {
-  const auth = getFirebaseAuth()
-  await ensureRecaptcha(auth)
-  clearVerifier()
-
-  const container = getContainer()
-
-  verifier = new RecaptchaVerifier(auth, container, {
+function buildVerifier(): RecaptchaVerifier {
+  const auth = getAuth_()
+  getContainer() // ensure container exists in DOM
+  return new RecaptchaVerifier(auth, CONTAINER_ID, {
     size: 'invisible',
     callback: () => {},
-    'expired-callback': () => { clearVerifier() },
+    'expired-callback': resetVerifier,
   })
+}
 
+const ERROR_MAP: Record<string, string> = {
+  'auth/invalid-phone-number':      'Invalid phone number.',
+  'auth/too-many-requests':         'Too many attempts. Please wait a few minutes and try again.',
+  'auth/captcha-check-failed':      'reCAPTCHA check failed. Reload the page and try again.',
+  'auth/invalid-app-credential':    'reCAPTCHA failed. Reload the page and try again.',
+  'auth/quota-exceeded':            'SMS quota exceeded. Try again later.',
+  'auth/billing-not-enabled':       'Firebase billing not enabled.',
+  'auth/user-disabled':             'This number has been disabled.',
+  'auth/invalid-verification-code': 'Wrong OTP. Please check and try again.',
+  'auth/code-expired':              'OTP expired. Please request a new one.',
+  'auth/session-expired':           'Session expired. Please request a new OTP.',
+  'auth/missing-verification-code': 'Please enter the 6-digit OTP.',
+}
+
+export async function sendPhoneCode(phoneDigits: string): Promise<void> {
+  resetVerifier()
+  _verifier = buildVerifier()
   try {
-    const widgetId = await verifier.render()
-    console.log('[Firebase] reCAPTCHA rendered, widgetId:', widgetId)
-    const result = await signInWithPhoneNumber(auth, `+91${phoneDigits}`, verifier)
+    const result = await signInWithPhoneNumber(getAuth_(), `+91${phoneDigits}`, _verifier)
     ;(window as any).__fbConfirm = result
-    // Hide the widget after success
-    const el = document.getElementById('sw-rc-root')
-    if (el) el.style.display = 'none'
-    return 'sent'
   } catch (err: any) {
-    clearVerifier()
-    _rcReady = false
-    const msg: Record<string, string> = {
-      'auth/billing-not-enabled':    'Firebase billing not enabled.',
-      'auth/invalid-phone-number':   'Invalid phone number.',
-      'auth/too-many-requests':      'Too many attempts. Please wait and try again.',
-      'auth/captcha-check-failed':   'reCAPTCHA check failed. Reload and try again.',
-      'auth/invalid-app-credential': 'reCAPTCHA failed. Reload and try again.',
-    }
-    throw new Error(msg[err?.code] ?? err?.message ?? 'Failed to send OTP')
+    resetVerifier()
+    throw new Error(ERROR_MAP[err?.code] ?? err?.message ?? 'Failed to send OTP. Please try again.')
   }
 }
 
 export async function confirmPhoneCode(code: string): Promise<{ idToken: string; phone: string }> {
   const result = (window as any).__fbConfirm
-  if (!result) throw new Error('Session expired. Please tap Send OTP again.')
+  if (!result) throw new Error('Session expired. Please request a new OTP.')
   try {
-    const credential = await result.confirm(code)
-    const idToken: string = await credential.user.getIdToken()
-    const phone: string   = (credential.user.phoneNumber || '').replace(/^\+91/, '')
+    const cred    = await result.confirm(code)
+    const idToken = await cred.user.getIdToken()
+    const phone   = (cred.user.phoneNumber ?? '').replace(/^\+91/, '')
     ;(window as any).__fbConfirm = null
-    clearVerifier()
-    // Restore container visibility for next use
-    const el = document.getElementById('sw-rc-root')
-    if (el) el.style.display = ''
+    resetVerifier()
     return { idToken, phone }
   } catch (err: any) {
-    const msg: Record<string, string> = {
-      'auth/invalid-verification-code': 'Wrong OTP. Please check and try again.',
-      'auth/code-expired':              'OTP expired. Please request a new one.',
-    }
-    throw new Error(msg[err?.code] ?? err?.message ?? 'OTP verification failed')
+    throw new Error(ERROR_MAP[err?.code] ?? err?.message ?? 'OTP verification failed.')
   }
 }

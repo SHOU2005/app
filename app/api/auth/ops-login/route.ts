@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!user.password) {
-      return NextResponse.json({ error: 'No password set for this account.' }, { status: 401 })
+      return NextResponse.json({ error: 'No password set. Contact admin to set up your account.' }, { status: 401 })
     }
 
     const valid = await comparePassword(password, user.password)

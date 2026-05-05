@@ -6,6 +6,22 @@ import { ADMIN_PHONE, isValidRole } from '@/lib/config'
 const API_KEY   = process.env.NEXT_PUBLIC_FIREBASE_AUTH_API_KEY  || ''
 const CREDS_B64 = process.env.HEARUS_FIREBASE_CREDENTIALS_BASE64 || ''
 
+function genCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = 'SW'
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  return code
+}
+
+async function uniqueReferralCode(): Promise<string> {
+  for (let i = 0; i < 20; i++) {
+    const code = genCode()
+    const existing = await prisma.captainProfile.findUnique({ where: { referralCode: code } })
+    if (!existing) return code
+  }
+  return genCode() + Date.now().toString(36).slice(-3).toUpperCase()
+}
+
 let adminVerify: ((token: string) => Promise<{ phone: string } | null>) | null = null
 
 async function getAdminVerifier() {
@@ -100,7 +116,7 @@ export async function POST(req: NextRequest) {
           data: { phone, name: displayName, role: 'CAPTAIN', password: '' },
         })
         await prisma.captainProfile.create({
-          data: { userId: user.id, status: 'PENDING', ...(territory ? { territory } : {}) },
+          data: { userId: user.id, status: 'PENDING', referralCode: await uniqueReferralCode(), ...(territory ? { territory } : {}) },
         })
       } else if (role === 'OPS') {
         user = await prisma.user.create({
@@ -160,7 +176,7 @@ export async function POST(req: NextRequest) {
         hasProfile = !!(await prisma.captainProfile.findUnique({ where: { userId: user.id } }))
         if (!hasProfile) {
           // Auto-create profile so captain registration from login page works
-          await prisma.captainProfile.create({ data: { userId: user.id, status: 'PENDING', ...(territory ? { territory } : {}) } })
+          await prisma.captainProfile.create({ data: { userId: user.id, status: 'PENDING', referralCode: await uniqueReferralCode(), ...(territory ? { territory } : {}) } })
           await prisma.user.update({ where: { id: user.id }, data: { role: 'CAPTAIN' } })
           hasProfile = true
         }
@@ -197,7 +213,7 @@ export async function POST(req: NextRequest) {
       } else if (tokenRole === 'WORKER') {
         await prisma.workerProfile.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} })
       } else if (tokenRole === 'CAPTAIN') {
-        await prisma.captainProfile.upsert({ where: { userId: user.id }, create: { userId: user.id, status: 'ACTIVE' }, update: {} })
+        await prisma.captainProfile.upsert({ where: { userId: user.id }, create: { userId: user.id, status: 'ACTIVE', referralCode: await uniqueReferralCode() }, update: {} })
       } else if (tokenRole === 'OPS') {
         await prisma.opsProfile.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} })
       }

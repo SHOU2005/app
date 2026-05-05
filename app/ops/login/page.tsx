@@ -28,9 +28,8 @@ export default function OpsLoginPage() {
     try {
       await sendPhoneCode(phone)
       setStage('otp')
-    } catch (e: any) {
-      setError(e.message || 'Failed to send OTP')
-    } finally { setLoading(false) }
+    } catch (e: any) { setError(e.message) }
+    finally { setLoading(false) }
   }
 
   async function handleVerify() {
@@ -38,16 +37,21 @@ export default function OpsLoginPage() {
     setLoading(true); setError('')
     try {
       const { idToken } = await confirmPhoneCode(otp)
-      const res = await fetch('/api/auth/firebase-verify', {
+      const res  = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken, role: 'OPS' }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Login failed'); return }
       router.replace('/ops')
-    } catch (e: any) {
-      setError(e.message || 'Verification failed')
-    } finally { setLoading(false) }
+    } catch (e: any) { setError(e.message) }
+    finally { setLoading(false) }
+  }
+
+  function handleOtpChange(v: string) {
+    const clean = v.replace(/\D/g, '').slice(0, 6)
+    setOtp(clean); setError('')
+    if (clean.length === 6) setTimeout(() => document.getElementById('ops-verify-btn')?.click(), 80)
   }
 
   return (
@@ -58,9 +62,7 @@ export default function OpsLoginPage() {
             <span style={{ fontSize: 30, fontWeight: 900, color: '#000', lineHeight: 1 }}>S</span>
           </div>
           <h1 style={{ color: T1, fontWeight: 800, fontSize: 22, margin: 0 }}>Ops Portal</h1>
-          <p style={{ color: T2, fontSize: 14, margin: '6px 0 0' }}>
-            {stage === 'phone' ? 'Internal operations team login' : `OTP sent to +91 ${phone}`}
-          </p>
+          <p style={{ color: T2, fontSize: 14, margin: '6px 0 0' }}>Internal operations team login</p>
         </div>
 
         {stage === 'phone' ? (
@@ -70,7 +72,7 @@ export default function OpsLoginPage() {
               style={{ width: '100%', background: '#1C1C1C', border: `1px solid ${phoneOk ? T1 : BD}`, borderRadius: 12,
                 padding: '14px 16px', color: T1, fontSize: 18, fontWeight: 600, letterSpacing: 2, outline: 'none',
                 boxSizing: 'border-box' as const, marginBottom: 16, transition: 'border-color 0.2s' }}
-              type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit number"
+              type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit number" autoFocus
               value={phone}
               onChange={e => { setPhone(e.target.value.replace(/\D/g, '')); setError('') }}
               onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
@@ -80,25 +82,24 @@ export default function OpsLoginPage() {
               style={{ width: '100%', padding: '14px', borderRadius: 12, background: phoneOk ? T1 : 'rgba(255,255,255,0.12)',
                 color: phoneOk ? '#000000' : T2, fontWeight: 800, fontSize: 15, border: 'none',
                 cursor: phoneOk ? 'pointer' : 'default', opacity: loading ? 0.75 : 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                transition: 'all 0.2s' }}>
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s' }}>
               {loading ? 'Sending OTP…' : <><span>Send OTP</span><ArrowRight style={{ width: 16, height: 16 }} /></>}
             </button>
           </>
         ) : (
           <>
-            <label style={{ fontSize: 13, fontWeight: 600, color: T2, display: 'block', marginBottom: 8 }}>Enter OTP</label>
+            <label style={{ fontSize: 13, fontWeight: 600, color: T2, display: 'block', marginBottom: 4 }}>Enter OTP</label>
+            <p style={{ fontSize: 12, color: T2, marginBottom: 10 }}>Sent to +91 {phone}</p>
             <input
               style={{ width: '100%', background: '#1C1C1C', border: `1px solid ${otpOk ? T1 : BD}`, borderRadius: 12,
-                padding: '14px 16px', color: T1, fontSize: 26, fontWeight: 800, letterSpacing: 8, outline: 'none',
+                padding: '14px 20px', color: T1, fontSize: 28, fontWeight: 800, letterSpacing: 10, outline: 'none',
                 boxSizing: 'border-box' as const, marginBottom: 8, transition: 'border-color 0.2s' }}
-              type="tel" inputMode="numeric" maxLength={6} placeholder="6-digit code"
+              type="tel" inputMode="numeric" maxLength={6} placeholder="_ _ _ _ _ _"
               value={otp} autoFocus
-              onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError('') }}
-              onKeyDown={e => e.key === 'Enter' && handleVerify()}
+              onChange={e => handleOtpChange(e.target.value)}
             />
             {error && <p style={{ color: '#EF4444', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-            <button onClick={handleVerify} disabled={!otpOk || loading}
+            <button id="ops-verify-btn" onClick={handleVerify} disabled={!otpOk || loading}
               style={{ width: '100%', marginTop: 8, padding: '14px', borderRadius: 12, background: otpOk ? T1 : 'rgba(255,255,255,0.12)',
                 color: otpOk ? '#000000' : T2, fontWeight: 800, fontSize: 15, border: 'none',
                 cursor: otpOk ? 'pointer' : 'default', opacity: loading ? 0.75 : 1,

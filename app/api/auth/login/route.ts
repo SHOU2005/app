@@ -18,27 +18,34 @@ export async function POST(req: NextRequest) {
       include: { workerProfile: true, employerProfile: true },
     })
 
-    if (!user || !(await comparePassword(data.password, user.password))) {
-      return NextResponse.json({ error: 'Invalid phone or password' }, { status: 401 })
+    if (!user) {
+      return NextResponse.json({ error: 'Phone not registered. Please create an account.' }, { status: 401 })
+    }
+
+    if (!user.password) {
+      return NextResponse.json({ error: 'No password set. Please register again to set a password.' }, { status: 401 })
+    }
+
+    if (!(await comparePassword(data.password, user.password))) {
+      return NextResponse.json({ error: 'Incorrect password.' }, { status: 401 })
     }
 
     if (!user.isActive) {
       return NextResponse.json({ error: 'Account suspended' }, { status: 403 })
     }
 
-    const token = signToken({ userId: user.id, role: user.role as 'EMPLOYER' | 'WORKER' | 'ADMIN', phone: user.phone })
+    const token = signToken({ userId: user.id, role: user.role as 'EMPLOYER' | 'WORKER' | 'ADMIN' | 'CAPTAIN' | 'OPS', phone: user.phone })
 
     const res = NextResponse.json({
       user: {
-        id:             user.id,
-        name:           user.name,
-        phone:          user.phone,
-        role:           user.role,
-        avatar:         user.avatar,
-        workerProfile:  user.workerProfile,
+        id:              user.id,
+        name:            user.name,
+        phone:           user.phone,
+        role:            user.role,
+        avatar:          user.avatar,
+        workerProfile:   user.workerProfile,
         employerProfile: user.employerProfile,
       },
-      token,
     })
 
     res.cookies.set(COOKIE_CONFIG.name, token, COOKIE_CONFIG.options)

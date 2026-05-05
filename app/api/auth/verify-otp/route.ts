@@ -3,6 +3,22 @@ import { prisma } from '@/lib/prisma'
 import { signToken, COOKIE_CONFIG } from '@/lib/auth'
 import { ADMIN_PHONE, isValidRole } from '@/lib/config'
 
+function genCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = 'SW'
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  return code
+}
+
+async function uniqueReferralCode(): Promise<string> {
+  for (let i = 0; i < 20; i++) {
+    const code = genCode()
+    const existing = await prisma.captainProfile.findUnique({ where: { referralCode: code } })
+    if (!existing) return code
+  }
+  return genCode() + Date.now().toString(36).slice(-3).toUpperCase()
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { phone, otp, role, referralCode } = await req.json()
@@ -52,7 +68,7 @@ export async function POST(req: NextRequest) {
         user = await prisma.user.create({
           data: { phone, name: `Captain ${phone.slice(-4)}`, role: 'CAPTAIN', password: '' },
         })
-        await prisma.captainProfile.create({ data: { userId: user.id, status: 'PENDING' } })
+        await prisma.captainProfile.create({ data: { userId: user.id, status: 'PENDING', referralCode: await uniqueReferralCode() } })
       } else if (role === 'OPS') {
         user = await prisma.user.create({
           data: { phone, name: `Ops ${phone.slice(-4)}`, role: 'OPS', password: '' },
@@ -94,7 +110,7 @@ export async function POST(req: NextRequest) {
       } else if (tokenRole === 'WORKER') {
         await prisma.workerProfile.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} })
       } else if (tokenRole === 'CAPTAIN') {
-        await prisma.captainProfile.upsert({ where: { userId: user.id }, create: { userId: user.id, status: 'ACTIVE' }, update: {} })
+        await prisma.captainProfile.upsert({ where: { userId: user.id }, create: { userId: user.id, status: 'ACTIVE', referralCode: await uniqueReferralCode() }, update: {} })
       } else if (tokenRole === 'OPS') {
         await prisma.opsProfile.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} })
       }

@@ -18,7 +18,7 @@ export async function GET() {
       _sum:   { amount: true },
     }),
     prisma.captainTask.count({
-      where: { captainProfileId: captain.id, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+      where: { captainProfileId: captain.id, status: 'OPEN' },
     }),
     prisma.employerProfile.count({ where: { captainReferralId: captain.id } }),
     prisma.workerProfile.count({ where: { captainReferralId: captain.id } }),

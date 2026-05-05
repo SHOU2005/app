@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, signToken, COOKIE_CONFIG } from '@/lib/auth'
 
+function genCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = 'SW'
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  return code
+}
+
+async function uniqueReferralCode(): Promise<string> {
+  for (let i = 0; i < 20; i++) {
+    const code = genCode()
+    const existing = await prisma.captainProfile.findUnique({ where: { referralCode: code } })
+    if (!existing) return code
+  }
+  return genCode() + Date.now().toString(36).slice(-3).toUpperCase()
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { phone, name, password, city } = await req.json()
@@ -16,18 +32,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 })
     }
 
-    const existing = await prisma.user.findUnique({ where: { phone } })
+    const hashed = await hashPassword(password)
+    const existing = await prisma.user.findUnique({
+      where:   { phone },
+      include: { captainProfile: true },
+    })
+
     if (existing) {
-      return NextResponse.json({ error: 'Phone already registered. Please login.' }, { status: 409 })
+      // Allow re-registration only if no password was set (old Firebase OTP account)
+      if (existing.password) {
+        return NextResponse.json({ error: 'Phone already registered. Please login.' }, { status: 409 })
+      }
+
+      // Migrate: set password and ensure captain profile exists
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: { name: name.trim(), password: hashed, role: 'CAPTAIN' },
+      })
+
+      if (!existing.captainProfile) {
+        await prisma.captainProfile.create({
+          data: { userId: existing.id, territory: city?.trim() || null, status: 'PENDING', referralCode: await uniqueReferralCode() },
+        })
+      }
+
+      const token = signToken({ userId: existing.id, role: 'CAPTAIN', phone: existing.phone })
+      const res = NextResponse.json({ success: true, role: 'CAPTAIN' })
+      res.cookies.set(COOKIE_CONFIG.name, token, COOKIE_CONFIG.options)
+      return res
     }
 
-    const hashed = await hashPassword(password)
+    // New user
     const user = await prisma.user.create({
       data: { phone, name: name.trim(), role: 'CAPTAIN', password: hashed },
     })
 
     await prisma.captainProfile.create({
-      data: { userId: user.id, territory: city?.trim() || null, status: 'PENDING' },
+      data: { userId: user.id, territory: city?.trim() || null, status: 'PENDING', referralCode: await uniqueReferralCode() },
     })
 
     const token = signToken({ userId: user.id, role: 'CAPTAIN', phone: user.phone })

@@ -9,27 +9,25 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  name        String
-  phone       String   @unique
-  email       String?  @unique
-  password    String   @default("")
-  role        String
-  avatar      String?
-  isActive    Boolean  @default(true)
-  fcmToken    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  id                 String           @id @default(cuid())
+  name               String
+  phone              String           @unique
+  email              String?          @unique
+  password           String           @default("")
+  avatar             String?
+  isActive           Boolean          @default(true)
+  fcmToken           String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
   captainReferralId  String?
-
-  employerProfile    EmployerProfile?
-  workerProfile      WorkerProfile?
+  role               Role             @default(WORKER)
+  bookingsAsEmployer Booking[]        @relation("EmployerBookings")
   captainProfile     CaptainProfile?
-  opsProfile         OpsProfile?
-  bookingsAsEmployer Booking[]       @relation("EmployerBookings")
-  ratingsGiven       Rating[]        @relation("RatingsGiven")
+  employerProfile    EmployerProfile?
   notifications      Notification[]
+  opsProfile         OpsProfile?
+  ratingsGiven       Rating[]         @relation("RatingsGiven")
+  workerProfile      WorkerProfile?
 
   @@index([phone])
   @@index([role])
@@ -43,8 +41,7 @@ model Notification {
   data      String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId, read])
   @@index([userId, createdAt])
@@ -66,104 +63,106 @@ model EmployerProfile {
   rating            Float     @default(0)
   captainReferralId String?
   verifiedByOpsAt   DateTime?
+  user              User      @relation(fields: [userId], references: [id])
+  shifts            Shift[]
 
-  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shifts Shift[]
+  @@index([city])
+  @@index([userId])
 }
 
 model WorkerProfile {
-  id                String    @id @default(cuid())
-  userId            String    @unique
+  id                String         @id @default(cuid())
+  userId            String         @unique
   profilePhoto      String?
   aadhaarNumber     String?
   aadhaarFront      String?
   aadhaarBack       String?
-  aadhaarVerified   Boolean   @default(false)
-  videoVerified     Boolean   @default(false)
-  kycStatus         String    @default("PENDING")
-  skills            String[]  @default([])
+  aadhaarVerified   Boolean        @default(false)
+  videoVerified     Boolean        @default(false)
+  skills            String[]
   city              String?
   lat               Float?
   lng               Float?
-  hourlyRate        Float     @default(125)
-  rating            Float     @default(0)
-  totalShifts       Int       @default(0)
-  totalEarnings     Float     @default(0)
-  isAvailable       Boolean   @default(true)
+  hourlyRate        Float          @default(125)
+  rating            Float          @default(0)
+  totalShifts       Int            @default(0)
+  totalEarnings     Float          @default(0)
+  isAvailable       Boolean        @default(true)
   bio               String?
   captainReferralId String?
+  kycStatus         KycStatus      @default(PENDING)
+  availability      Availability[]
+  bookings          Booking[]
+  ratings           Rating[]       @relation("WorkerRatings")
+  user              User           @relation(fields: [userId], references: [id])
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookings     Booking[]
-  ratings      Rating[]      @relation("WorkerRatings")
-  availability Availability[]
+  @@index([city])
+  @@index([kycStatus])
+  @@index([userId])
 }
 
 model Availability {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   workerProfileId String
   date            DateTime
   startTime       String
   endTime         String
-  isBooked        Boolean  @default(false)
-
-  worker WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  isBooked        Boolean       @default(false)
+  worker          WorkerProfile @relation(fields: [workerProfileId], references: [id])
 
   @@index([workerProfileId, date])
 }
 
 model Shift {
-  id                String   @id @default(cuid())
+  id                String          @id @default(cuid())
   employerProfileId String
   title             String
   role              String
   description       String?
   address           String
   city              String
-  lat               Float
-  lng               Float
+  lat               Float?
+  lng               Float?
   date              DateTime
   startTime         String
   endTime           String
-  duration          Int
-  workersNeeded     Int      @default(1)
-  hourlyRate        Float    @default(200)
-  isUrgent          Boolean  @default(false)
-  urgentFee         Float    @default(0)
-  status            String   @default("OPEN")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  employer EmployerProfile @relation(fields: [employerProfileId], references: [id], onDelete: Cascade)
-  bookings Booking[]
+  duration          Float
+  workersNeeded     Int             @default(1)
+  hourlyRate        Float           @default(200)
+  isUrgent          Boolean         @default(false)
+  urgentFee         Float           @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  status            ShiftStatus     @default(OPEN)
+  bookings          Booking[]
+  employer          EmployerProfile @relation(fields: [employerProfileId], references: [id])
 
   @@index([city, date])
   @@index([lat, lng])
 }
 
 model Booking {
-  id              String    @id @default(cuid())
+  id              String        @id @default(cuid())
   shiftId         String
   workerProfileId String
   employerId      String
-  status          String    @default("PENDING")
   totalAmount     Float
   platformFee     Float
   workerEarning   Float
-  paymentStatus   String    @default("PENDING")
   paymentId       String?
   checkInTime     DateTime?
   checkOutTime    DateTime?
   notes           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  shift      Shift         @relation(fields: [shiftId], references: [id])
-  worker     WorkerProfile @relation(fields: [workerProfileId], references: [id])
-  employer   User          @relation("EmployerBookings", fields: [employerId], references: [id])
-  payment    Payment?
-  rating     Rating?
-  commission Commission?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  status          BookingStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  employer        User          @relation("EmployerBookings", fields: [employerId], references: [id])
+  shift           Shift         @relation(fields: [shiftId], references: [id])
+  worker          WorkerProfile @relation(fields: [workerProfileId], references: [id])
+  commission      Commission?
+  payment         Payment?
+  rating          Rating?
 
   @@index([shiftId])
   @@index([workerProfileId])
@@ -171,30 +170,28 @@ model Booking {
 }
 
 model Payment {
-  id                String   @id @default(cuid())
-  bookingId         String   @unique
+  id                String        @id @default(cuid())
+  bookingId         String        @unique
   razorpayOrderId   String?
   razorpayPaymentId String?
   amount            Float
-  currency          String   @default("INR")
-  status            String   @default("PENDING")
-  createdAt         DateTime @default(now())
-
-  booking Booking @relation(fields: [bookingId], references: [id])
+  currency          String        @default("INR")
+  createdAt         DateTime      @default(now())
+  status            PaymentStatus @default(PENDING)
+  booking           Booking       @relation(fields: [bookingId], references: [id])
 }
 
 model Rating {
-  id              String   @id @default(cuid())
-  bookingId       String   @unique
+  id              String        @id @default(cuid())
+  bookingId       String        @unique
   workerProfileId String
   ratedById       String
   score           Int
   comment         String?
-  createdAt       DateTime @default(now())
-
-  booking    WorkerProfile @relation("WorkerRatings", fields: [workerProfileId], references: [id])
-  ratedBy    User          @relation("RatingsGiven", fields: [ratedById], references: [id])
-  bookingRef Booking       @relation(fields: [bookingId], references: [id])
+  createdAt       DateTime      @default(now())
+  bookingRef      Booking       @relation(fields: [bookingId], references: [id])
+  ratedBy         User          @relation("RatingsGiven", fields: [ratedById], references: [id])
+  booking         WorkerProfile @relation("WorkerRatings", fields: [workerProfileId], references: [id])
 }
 
 model Complaint {
@@ -222,57 +219,54 @@ model OtpLog {
 }
 
 model CaptainProfile {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  referralCode  String?  @unique
+  id            String              @id @default(cuid())
+  userId        String              @unique
+  referralCode  String              @unique
   territory     String?
-  status        String   @default("PENDING")
-  totalEarnings Float    @default(0)
-  pendingPayout Float    @default(0)
-  joinedAt      DateTime @default(now())
-
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  commissions Commission[]
-  tasks       CaptainTask[]
-  attendances CaptainAttendance[]
+  totalEarnings Float               @default(0)
+  pendingPayout Float               @default(0)
+  joinedAt      DateTime            @default(now())
+  status        CaptainStatus       @default(PENDING)
+  attendances   CaptainAttendance[]
+  user          User                @relation(fields: [userId], references: [id])
+  tasks         CaptainTask[]
+  commissions   Commission[]
 
   @@index([status])
   @@index([territory])
 }
 
 model Commission {
-  id               String    @id @default(cuid())
+  id               String           @id @default(cuid())
   captainProfileId String
-  bookingId        String    @unique
-  amount           Float     @default(100)
-  status           String    @default("PENDING")
+  bookingId        String           @unique
+  amount           Float            @default(100)
   paidAt           DateTime?
-  createdAt        DateTime  @default(now())
-
-  captain CaptainProfile @relation(fields: [captainProfileId], references: [id], onDelete: Cascade)
-  booking Booking        @relation(fields: [bookingId], references: [id])
+  createdAt        DateTime         @default(now())
+  status           CommissionStatus @default(PENDING)
+  booking          Booking          @relation(fields: [bookingId], references: [id])
+  captain          CaptainProfile   @relation(fields: [captainProfileId], references: [id])
 
   @@index([captainProfileId, status])
 }
 
 model CaptainTask {
-  id               String    @id @default(cuid())
+  id               String         @id @default(cuid())
   captainProfileId String
   assignedByUserId String
   title            String
   description      String?
   dueDate          DateTime?
-  status           String    @default("OPEN")
   completedAt      DateTime?
-  createdAt        DateTime  @default(now())
-
-  captain CaptainProfile @relation(fields: [captainProfileId], references: [id], onDelete: Cascade)
+  createdAt        DateTime       @default(now())
+  status           TaskStatus     @default(OPEN)
+  captain          CaptainProfile @relation(fields: [captainProfileId], references: [id])
 
   @@index([captainProfileId, status])
 }
 
 model CaptainAttendance {
-  id               String    @id @default(cuid())
+  id               String         @id @default(cuid())
   captainProfileId String
   date             DateTime
   checkInTime      DateTime?
@@ -281,8 +275,7 @@ model CaptainAttendance {
   checkOutTime     DateTime?
   checkOutLat      Float?
   checkOutLng      Float?
-
-  captain CaptainProfile @relation(fields: [captainProfileId], references: [id], onDelete: Cascade)
+  captain          CaptainProfile @relation(fields: [captainProfileId], references: [id])
 
   @@index([captainProfileId, date])
 }
@@ -290,9 +283,8 @@ model CaptainAttendance {
 model OpsProfile {
   id          String   @id @default(cuid())
   userId      String   @unique
-  permissions String[] @default([])
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissions String[]
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model BroadcastLog {
@@ -300,7 +292,7 @@ model BroadcastLog {
   sentByUserId String
   title        String
   body         String
-  targetRole   String
+  targetRole   String?
   targetCity   String?
   sentCount    Int      @default(0)
   createdAt    DateTime @default(now())
@@ -311,4 +303,57 @@ model PlatformSetting {
   key       String   @unique
   value     String
   updatedAt DateTime @updatedAt
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum CaptainStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+}
+
+enum Role {
+  WORKER
+  EMPLOYER
+  CAPTAIN
+  OPS
+  ADMIN
+}
+
+enum ShiftStatus {
+  OPEN
+  SEARCHING
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskStatus {
+  OPEN
+  COMPLETED
 }

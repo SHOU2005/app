@@ -4,11 +4,14 @@ import { hashPassword, signToken, COOKIE_CONFIG } from '@/lib/auth'
 import { z } from 'zod'
 
 const schema = z.object({
-  name:     z.string().min(2),
-  phone:    z.string().length(10),
-  password: z.string().min(6),
-  role:     z.enum(['EMPLOYER', 'WORKER']),
-  city:     z.string().optional(),
+  name:         z.string().min(2),
+  phone:        z.string().length(10),
+  password:     z.string().min(6),
+  role:         z.enum(['EMPLOYER', 'WORKER']),
+  city:         z.string().optional(),
+  companyName:  z.string().optional(),
+  ownerName:    z.string().optional(),
+  referralCode: z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -16,33 +19,88 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = schema.parse(body)
 
-    const existing = await prisma.user.findUnique({ where: { phone: data.phone } })
-    if (existing) {
-      return NextResponse.json({ error: 'Phone already registered' }, { status: 409 })
-    }
-
     const hashed = await hashPassword(data.password)
 
+    // Resolve captain referral code to captainProfileId
+    let captainRefId: string | undefined
+    if (data.referralCode) {
+      const cap = await prisma.captainProfile.findUnique({
+        where: { referralCode: data.referralCode.toUpperCase().trim() },
+      })
+      if (cap) captainRefId = cap.id
+    }
+
+    const existing = await prisma.user.findUnique({ where: { phone: data.phone } })
+
+    if (existing) {
+      // Allow re-registration only if no password was set (old Firebase OTP account)
+      if (existing.password) {
+        return NextResponse.json({ error: 'Phone already registered. Please login.' }, { status: 409 })
+      }
+
+      // Migrate: set password and ensure profile exists
+      const user = await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          name:     data.name,
+          password: hashed,
+          role:     data.role,
+          ...(captainRefId ? { captainReferralId: captainRefId } : {}),
+        },
+        include: { employerProfile: true, workerProfile: true },
+      })
+
+      if (data.role === 'EMPLOYER' && !user.employerProfile) {
+        await prisma.employerProfile.create({
+          data: {
+            userId: user.id,
+            city: data.city,
+            companyName: data.companyName,
+            ownerName: data.ownerName,
+            ...(captainRefId ? { captainReferralId: captainRefId } : {}),
+          },
+        })
+      } else if (data.role === 'WORKER' && !user.workerProfile) {
+        await prisma.workerProfile.create({
+          data: {
+            userId: user.id,
+            city: data.city,
+            ...(captainRefId ? { captainReferralId: captainRefId } : {}),
+          },
+        })
+      }
+
+      const token = signToken({ userId: user.id, role: data.role, phone: user.phone })
+      const res = NextResponse.json({ user: { id: user.id, name: user.name, phone: user.phone, role: data.role } }, { status: 200 })
+      res.cookies.set(COOKIE_CONFIG.name, token, COOKIE_CONFIG.options)
+      return res
+    }
+
+    // New user
     const user = await prisma.user.create({
       data: {
         name:     data.name,
         phone:    data.phone,
         password: hashed,
         role:     data.role,
+        ...(captainRefId ? { captainReferralId: captainRefId } : {}),
         ...(data.role === 'EMPLOYER'
-          ? { employerProfile: { create: { city: data.city } } }
-          : { workerProfile:   { create: { city: data.city } } }),
+          ? { employerProfile: { create: {
+              city: data.city,
+              companyName: data.companyName,
+              ownerName: data.ownerName,
+              ...(captainRefId ? { captainReferralId: captainRefId } : {}),
+            } } }
+          : { workerProfile: { create: {
+              city: data.city,
+              ...(captainRefId ? { captainReferralId: captainRefId } : {}),
+            } } }),
       },
       include: { employerProfile: true, workerProfile: true },
     })
 
-    const token = signToken({ userId: user.id, role: user.role as 'EMPLOYER' | 'WORKER' | 'ADMIN', phone: user.phone })
-
-    const res = NextResponse.json({
-      user: { id: user.id, name: user.name, phone: user.phone, role: user.role },
-      token,
-    }, { status: 201 })
-
+    const token = signToken({ userId: user.id, role: user.role as 'EMPLOYER' | 'WORKER', phone: user.phone })
+    const res = NextResponse.json({ user: { id: user.id, name: user.name, phone: user.phone, role: user.role } }, { status: 201 })
     res.cookies.set(COOKIE_CONFIG.name, token, COOKIE_CONFIG.options)
     return res
   } catch (err: unknown) {

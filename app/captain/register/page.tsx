@@ -20,9 +20,9 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
 
-  const phoneOk  = /^\d{10}$/.test(phone)
-  const otpOk    = /^\d{6}$/.test(otp)
-  const formOk   = name.trim().length > 1 && phoneOk && city.trim().length > 0
+  const phoneOk = /^\d{10}$/.test(phone)
+  const otpOk   = /^\d{6}$/.test(otp)
+  const formOk  = name.trim().length > 1 && phoneOk && city.trim().length > 0
 
   async function handleSendOtp() {
     if (!formOk || loading) return
@@ -30,9 +30,8 @@ function RegisterForm() {
     try {
       await sendPhoneCode(phone)
       setOtpSent(true)
-    } catch (e: any) {
-      setError(e.message || t('networkError'))
-    } finally { setLoading(false) }
+    } catch (e: any) { setError(e.message) }
+    finally { setLoading(false) }
   }
 
   async function handleVerify() {
@@ -40,35 +39,40 @@ function RegisterForm() {
     setLoading(true); setError('')
     try {
       const { idToken } = await confirmPhoneCode(otp)
-      const res = await fetch('/api/auth/firebase-verify', {
+      const res  = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken, role: 'CAPTAIN', name: name.trim(), territory: city.trim() }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || t('registerFailed')); return }
       router.replace('/captain')
-    } catch (e: any) {
-      setError(e.message || t('networkError'))
-    } finally { setLoading(false) }
+    } catch (e: any) { setError(e.message) }
+    finally { setLoading(false) }
+  }
+
+  function handleOtpChange(v: string) {
+    const clean = v.replace(/\D/g, '').slice(0, 6)
+    setOtp(clean); setError('')
+    if (clean.length === 6) setTimeout(() => document.getElementById('capreg-verify-btn')?.click(), 80)
   }
 
   return (
     <div style={{ fontFamily: FONT, minHeight: '100vh', background: '#F8F8F8', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Header */}
       <div style={{ background: '#111111', padding: '40px 24px 28px', paddingTop: 'calc(40px + env(safe-area-inset-top))' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <div style={{ width: 44, height: 44, borderRadius: 14, background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <span style={{ fontSize: 26, fontWeight: 900, color: '#111111', lineHeight: 1, letterSpacing: -1, fontFamily: '"DM Sans", sans-serif' }}>S</span>
+            <span style={{ fontSize: 26, fontWeight: 900, color: '#111111', lineHeight: 1, letterSpacing: -1 }}>S</span>
           </div>
           <div>
             <p style={{ fontSize: 18, fontWeight: 900, color: '#FFFFFF', margin: 0 }}>{t('joinAsCaptain')}</p>
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: 0 }}>{t('joinTagline')}</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
           {[t('onboardWorkers'), t('buildTerritory'), t('dailyCommissions')].map(txt => (
-            <div key={txt} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div key={txt} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8,
+              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <CheckCircle style={{ width: 11, height: 11, color: '#22C55E' }} />
               <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>{txt}</span>
             </div>
@@ -76,80 +80,68 @@ function RegisterForm() {
         </div>
       </div>
 
-      {/* Form card */}
-      <div style={{ flex: 1, background: '#FFFFFF', borderRadius: '24px 24px 0 0', marginTop: -16, padding: '28px 24px', paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}>
+      <div style={{ flex: 1, background: '#FFFFFF', borderRadius: '24px 24px 0 0', marginTop: -16,
+        padding: '28px 24px', paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}>
 
         <h2 style={{ fontSize: 22, fontWeight: 900, color: '#111111', margin: '0 0 6px' }}>{t('createYourAccount')}</h2>
         <p style={{ fontSize: 14, color: 'rgba(0,0,0,0.45)', margin: '0 0 24px' }}>{t('fillDetails')}</p>
 
-        {/* Full name */}
+        {/* Name */}
         <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' as const, display: 'block', marginBottom: 8 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>
             {t('fullName')}
           </label>
-          <input
-            type="text" placeholder={t('namePlaceholder')}
-            value={name} disabled={otpSent}
+          <input type="text" placeholder={t('namePlaceholder')} value={name} disabled={otpSent}
             onChange={e => { setName(e.target.value); setError('') }}
             style={{ width: '100%', height: 54, borderRadius: 14, border: `1.5px solid ${name.trim().length > 1 ? '#111111' : 'rgba(0,0,0,0.12)'}`,
               background: '#FAFAFA', outline: 'none', padding: '0 14px', fontSize: 16, fontWeight: 600,
-              color: '#111111', boxSizing: 'border-box' as const, transition: 'border-color 0.15s',
-              opacity: otpSent ? 0.6 : 1 }}
-          />
+              color: '#111111', boxSizing: 'border-box' as const, opacity: otpSent ? 0.6 : 1 }} />
         </div>
 
         {/* Phone */}
         <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' as const, display: 'block', marginBottom: 8 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>
             {t('mobileNumber')}
           </label>
-          <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${phoneOk ? '#111111' : 'rgba(0,0,0,0.12)'}`, borderRadius: 14, background: '#FAFAFA', overflow: 'hidden', transition: 'border-color 0.15s', opacity: otpSent ? 0.6 : 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${phoneOk ? '#111111' : 'rgba(0,0,0,0.12)'}`,
+            borderRadius: 14, background: '#FAFAFA', overflow: 'hidden', opacity: otpSent ? 0.6 : 1 }}>
             <div style={{ padding: '0 14px', borderRight: '1px solid rgba(0,0,0,0.08)', height: 54, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <span style={{ fontSize: 18 }}>🇮🇳</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#111111' }}>+91</span>
             </div>
-            <input
-              type="tel" inputMode="numeric" maxLength={10} placeholder={t('phonePlaceholder')}
-              value={phone} disabled={otpSent}
+            <input type="tel" inputMode="numeric" maxLength={10} placeholder={t('phonePlaceholder')} disabled={otpSent}
+              value={phone}
               onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
-              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', padding: '0 14px', fontSize: 18, fontWeight: 700, color: '#111111', letterSpacing: 2, height: 54 }}
-            />
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', padding: '0 14px', fontSize: 18, fontWeight: 700, color: '#111111', letterSpacing: 2, height: 54 }} />
           </div>
         </div>
 
         {/* City */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' as const, display: 'block', marginBottom: 8 }}>
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.45)', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 8 }}>
             {t('cityTerritoryLabel')} *
           </label>
-          <input
-            type="text" placeholder={t('cityPlaceholder')}
-            value={city} disabled={otpSent}
+          <input type="text" placeholder={t('cityPlaceholder')} value={city} disabled={otpSent}
             onChange={e => setCity(e.target.value)}
             style={{ width: '100%', height: 54, borderRadius: 14, border: `1.5px solid ${city ? '#111111' : 'rgba(0,0,0,0.12)'}`,
               background: '#FAFAFA', outline: 'none', padding: '0 14px', fontSize: 16, fontWeight: 600,
-              color: '#111111', boxSizing: 'border-box' as const, transition: 'border-color 0.15s',
-              opacity: otpSent ? 0.6 : 1 }}
-          />
+              color: '#111111', boxSizing: 'border-box' as const, opacity: otpSent ? 0.6 : 1 }} />
         </div>
 
         {/* OTP entry */}
         {otpSent && (
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#111111', letterSpacing: '0.06em', textTransform: 'uppercase' as const, display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#111111', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>
               OTP sent to +91 {phone}
             </label>
             <p style={{ fontSize: 12, color: 'rgba(0,0,0,0.4)', marginBottom: 10 }}>Check your SMS inbox</p>
             <div style={{ border: `1.5px solid ${otpOk ? '#111111' : 'rgba(0,0,0,0.12)'}`, borderRadius: 14, background: '#FAFAFA', overflow: 'hidden' }}>
-              <input
-                type="tel" inputMode="numeric" maxLength={6} placeholder="6-digit OTP"
-                value={otp} autoFocus
-                onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError('') }}
-                onKeyDown={e => e.key === 'Enter' && handleVerify()}
+              <input type="tel" inputMode="numeric" maxLength={6} placeholder="_ _ _ _ _ _" autoFocus
+                value={otp}
+                onChange={e => handleOtpChange(e.target.value)}
                 style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none',
-                  padding: '0 16px', fontSize: 28, fontWeight: 800, color: '#111111', letterSpacing: 8, height: 64,
-                  boxSizing: 'border-box' as const }}
-              />
+                  padding: '0 20px', fontSize: 32, fontWeight: 800, color: '#111111', letterSpacing: 12, height: 68,
+                  boxSizing: 'border-box' as const }} />
             </div>
           </div>
         )}
@@ -163,8 +155,7 @@ function RegisterForm() {
         {!otpSent ? (
           <button onClick={handleSendOtp} disabled={!formOk || loading}
             style={{ width: '100%', height: 56, borderRadius: 16, border: 'none',
-              background: formOk ? '#111111' : '#E5E5E5',
-              color: formOk ? '#FFFFFF' : 'rgba(0,0,0,0.25)',
+              background: formOk ? '#111111' : '#E5E5E5', color: formOk ? '#FFFFFF' : 'rgba(0,0,0,0.25)',
               fontSize: 16, fontWeight: 800, cursor: formOk ? 'pointer' : 'default',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               transition: 'all 0.2s', marginBottom: 20,
@@ -173,10 +164,9 @@ function RegisterForm() {
           </button>
         ) : (
           <>
-            <button onClick={handleVerify} disabled={!otpOk || loading}
+            <button id="capreg-verify-btn" onClick={handleVerify} disabled={!otpOk || loading}
               style={{ width: '100%', height: 56, borderRadius: 16, border: 'none',
-                background: otpOk ? '#111111' : '#E5E5E5',
-                color: otpOk ? '#FFFFFF' : 'rgba(0,0,0,0.25)',
+                background: otpOk ? '#111111' : '#E5E5E5', color: otpOk ? '#FFFFFF' : 'rgba(0,0,0,0.25)',
                 fontSize: 16, fontWeight: 800, cursor: otpOk ? 'pointer' : 'default',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 transition: 'all 0.2s', marginBottom: 12,
@@ -191,7 +181,7 @@ function RegisterForm() {
           </>
         )}
 
-        <p style={{ textAlign: 'center', fontSize: 14, color: 'rgba(0,0,0,0.45)', margin: 0 }}>
+        <p style={{ textAlign: 'center', fontSize: 14, color: 'rgba(0,0,0,0.45)', margin: '8px 0 0' }}>
           {t('alreadyRegistered')}{' '}
           <a href="/captain/login" style={{ color: '#111111', fontWeight: 800, textDecoration: 'none' }}>{t('signIn')} →</a>
         </p>
@@ -203,7 +193,7 @@ function RegisterForm() {
 function Spinner() {
   return (
     <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', animation: 'spin 0.7s linear infinite' }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 }
