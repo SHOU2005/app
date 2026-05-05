@@ -1,9 +1,8 @@
 'use client'
 
-import { initializeApp, getApps, getApp } from 'firebase/app'
+import { initializeApp, getApps } from 'firebase/app'
 import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth'
 
-// Firebase client config is public by design — safe to hardcode
 const FIREBASE_CONFIG = {
   apiKey:            'AIzaSyCk1e3yCrlsn0V6qDa43OwTeLaYuNKX2sE',
   authDomain:        'hearus-4f2fe.firebaseapp.com',
@@ -15,13 +14,13 @@ const FIREBASE_CONFIG = {
 
 const APP_NAME = 'switchnow'
 
+let _auth: ReturnType<typeof getAuth> | null = null
+
 function getFirebaseAuth() {
+  if (_auth) return _auth
   const app = getApps().find(a => a.name === APP_NAME) ?? initializeApp(FIREBASE_CONFIG, APP_NAME)
-  const auth = getAuth(app)
-  if (process.env.NODE_ENV === 'development') {
-    auth.settings.appVerificationDisabledForTesting = true
-  }
-  return auth
+  _auth = getAuth(app)
+  return _auth
 }
 
 let verifier: RecaptchaVerifier | null = null
@@ -66,6 +65,7 @@ export async function sendPhoneCode(phoneDigits: string): Promise<string> {
       'auth/invalid-phone-number': 'Invalid phone number.',
       'auth/too-many-requests':    'Too many attempts. Please wait and try again.',
       'auth/captcha-check-failed': 'reCAPTCHA check failed. Reload and try again.',
+      'auth/invalid-app-credential': 'App credential error. Please reload and try again.',
     }
     throw new Error(msg[err?.code] ?? err?.message ?? 'Failed to send OTP')
   }

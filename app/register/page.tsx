@@ -2,6 +2,7 @@
 import { useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, Check, ChevronLeft, Camera, Upload } from 'lucide-react'
+import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
 
 const JOB_TYPES = [
   { id: 'shop',         emoji: '🏪', label: 'Shop Helper'      },
@@ -95,12 +96,7 @@ function RegisterForm() {
     if (!step1Ok || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Failed to send OTP'); return }
+      await sendPhoneCode(phone)
       setOtpSent(true)
     } catch (e: any) {
       setError(e.message || 'Failed to send OTP')
@@ -111,9 +107,10 @@ function RegisterForm() {
     if (!otpOk || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/verify-otp', {
+      const { idToken } = await confirmPhoneCode(otp)
+      const res = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp, role: 'WORKER', name: name.trim(), city: city.trim(), referralCode: referral || undefined }),
+        body: JSON.stringify({ idToken, role: 'WORKER', name: name.trim(), city: city.trim(), referralCode: referral || undefined }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Registration failed'); return }

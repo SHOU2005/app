@@ -3,6 +3,7 @@ import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, CheckCircle } from 'lucide-react'
 import { useLanguage } from '../LanguageContext'
+import { sendPhoneCode, confirmPhoneCode } from '@/lib/firebase-phone-auth'
 
 const FONT = '"DM Sans", system-ui, sans-serif'
 
@@ -27,12 +28,7 @@ function RegisterForm() {
     if (!formOk || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || t('networkError')); return }
+      await sendPhoneCode(phone)
       setOtpSent(true)
     } catch (e: any) {
       setError(e.message || t('networkError'))
@@ -43,9 +39,10 @@ function RegisterForm() {
     if (!otpOk || loading) return
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/auth/verify-otp', {
+      const { idToken } = await confirmPhoneCode(otp)
+      const res = await fetch('/api/auth/firebase-verify', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp, role: 'CAPTAIN', name: name.trim() }),
+        body: JSON.stringify({ idToken, role: 'CAPTAIN', name: name.trim(), territory: city.trim() }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || t('registerFailed')); return }
